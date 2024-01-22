@@ -1,0 +1,7 @@
+analyzed_granule_data
+analyzed_granule_data/*
+datasets
+datasets/*
+runs/segment/train/*
+runs/segment/train2/*
+*.pt
