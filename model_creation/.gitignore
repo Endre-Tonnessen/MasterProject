@@ -1,0 +1,10 @@
+datasets/analyzed_granule_data
+datasets/analyzed_granule_data/*
+datasets
+datasets/*
+runs/segment/train/*
+runs/segment/train2/*
+runs/segment/train3/*
+*.pt
+yolov8_models
+yolov8_models/*.pt

@@ -1,0 +1,10 @@
+data
+data/*
+__pycache__
+.png
+granule_pngs
+granule_pngs/*
+*.png
+datasets
+datasets/*
+*.csv
