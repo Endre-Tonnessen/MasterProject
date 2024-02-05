@@ -58,9 +58,12 @@ def pixels_between_points(xs: list[float], ys: list[float], precision: int = 5, 
     """
     assert len(xs) == len(ys), f"Coordinate lists must be of equal length, was xs={len(xs)}, ys={len(ys)}"
     
+    # Phi, the offset introduced by scaling the image. Error due to subpixel math. TODO: Look more into this. Explain why this happens.
+    offset_push_x = scale_factor_x / 2 - 1/2
+    offset_push_y = scale_factor_y / 2 - 1/2
     # Scale coordinates
-    xs = np.array(xs)*scale_factor_x
-    ys = np.array(ys)*scale_factor_y
+    xs = offset_push_x+np.array(xs)*scale_factor_x
+    ys = offset_push_y+np.array(ys)*scale_factor_y
 
     x_pixels = np.array([])
     y_pixels = np.array([])

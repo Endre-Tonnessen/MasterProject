@@ -81,12 +81,15 @@ def pixels_between_points(xs: list[float], ys: list[float], precision: int = 5, 
 
 import plotly.express as px
 
-def get_border_pixels(mask_image) -> list[tuple[int,int]]:
+def get_border_pixels(mask_image) -> list[tuple[int,int]]: 
     """Returns pixels that make up granule border. ONLY SUPPORTS ONE MASK
     Args:
         mask_image: YOLO Result class.
     Returns:
         list[tuple[int,int]]: List of (x,y) coords of boundry pixels
+    
+        TODO: https://github.com/kusumaatmaja/granule_explorer_core/blob/develop/granule_explorer_core/common/boundary_extraction.py
+              See get_fourier_terms
     """
     # Get first mask
     masks = mask_image[0].plot(conf=False, line_width=0, font_size=0,img=np.zeros((1024, 1024, 3), dtype=np.uint8), kpt_radius=0, kpt_line=False, labels=False, boxes=False, masks=True, probs=False)
