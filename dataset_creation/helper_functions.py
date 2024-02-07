@@ -60,7 +60,7 @@ def pixels_between_points(xs: list[float], ys: list[float], precision: int = 5, 
     
     # Phi, the offset introduced by scaling the image. Error due to subpixel math. TODO: Look more into this. Explain why this happens.
     offset_push_x = scale_factor_x / 2 - 1/2
-    offset_push_y = scale_factor_y / 2 - 1/2
+    offset_push_y = scale_factor_y / 2 - 1/2 
     # Scale coordinates
     xs = offset_push_x+np.array(xs)*scale_factor_x
     ys = offset_push_y+np.array(ys)*scale_factor_y
@@ -79,4 +79,5 @@ def pixels_between_points(xs: list[float], ys: list[float], precision: int = 5, 
         x_pixels = np.append(x_pixels,x_space)
         y_pixels = np.append(y_pixels,y_space)
 
-    return np.round(x_pixels,0), np.round(y_pixels,0)
+    return np.round(x_pixels,0), np.round(y_pixels,0) # Do floor instead. Remove 1/2 from the phi offset.
+    # 
