@@ -1,4 +1,4 @@
-import frame_gen as fg
+import dataset_creation.helper_functions.frame_gen as fg
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from helper_functions import get_coords, pixels_between_points
+from dataset_creation.helper_functions.helper_functions import get_coords, pixels_between_points
 
 import pathlib
 import platform
@@ -87,7 +87,7 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             
             image_data = frame.im_data
             granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
-            # ------------------- Scaling the granule cutout ------------------- 
+            # ------------------- Scaling the granule cutout ------------------- TODO: Make scaling preserve original cutout ratio
             NEW_MAX_WIDTH = 1024
             NEW_MAX_HEIGHT = 1024
             original_image = Image.fromarray(granule_cutout_image)
@@ -96,7 +96,7 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             scale_factor_width = NEW_MAX_WIDTH / original_width
             assert scale_factor_height*original_height == NEW_MAX_HEIGHT, f"Should be {NEW_MAX_HEIGHT} was {scale_factor_height*original_height}"
             assert scale_factor_width*original_width == NEW_MAX_WIDTH, f"Should be {NEW_MAX_WIDTH} was {scale_factor_width*original_width}"
-            # ------------------- Add scaling info to df ------------------- 
+            # ------------------- Add scaling info to df ------------------- TODO: Might not need this
             scaling_dict['x_width_scale'].append(scale_factor_width)
             scaling_dict['y_height_scale'].append(scale_factor_height)
             scaling_dict['x_width_original_pixels'].append(original_width)
@@ -106,7 +106,7 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             scaling_dict['origin_filename'].append(image_filename)
             # ------------------- Rescale image ------------------- 
             upscaled_image = np.array(original_image.resize((NEW_MAX_WIDTH, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST)) 
-            # ------------------- Get pixel boundry ------------------- 
+            # ------------------- Get pixel boundry -------------------  TODO: Create better `pixels_between_points()` that cannot miss pixels 
             xs,ys = get_coords(granule_fourier, get_relative=True)
             xs_pixels, ys_pixels = pixels_between_points(np.append(xs,xs[0]), np.append(ys,ys[0]), precision=100, scale_factor_x=scale_factor_width, scale_factor_y=scale_factor_height)
             coords_tuple = [(xs_pixels[i], ys_pixels[i]) for i in range(len(xs_pixels))]
