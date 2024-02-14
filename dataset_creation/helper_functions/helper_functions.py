@@ -102,7 +102,7 @@ def pixels_between_points_2(xs: list[float], ys: list[float]) -> tuple[list[int]
 
     return x_pixels, y_pixels # Do floor instead. Remove 1/2 from the phi offset.    
 
-def intersect(x_0, y_0, x_1, y_1): 
+def intersect(x_0, y_0, x_1, y_1): #TODO: Add 1/2 to input coordinates. This can be done in this function, translating the input coordinates to 'corner centered' instead.
     # https://gamedev.stackexchange.com/questions/81267/how-do-i-generalise-bresenhams-line-algorithm-to-floating-point-endpoints
     # https://jsfiddle.net/6x7t4q1o/5
     # Made by Andrew?

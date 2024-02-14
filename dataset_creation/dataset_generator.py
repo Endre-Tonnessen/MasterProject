@@ -106,8 +106,10 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             scaling_dict['origin_filename'].append(image_filename)
             # ------------------- Rescale image ------------------- 
             upscaled_image = np.array(original_image.resize((NEW_MAX_WIDTH, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST)) 
-            # ------------------- Get pixel boundry -------------------  TODO: Create better `pixels_between_points()` that cannot miss pixels 
+            # ------------------- Get pixel boundry -------------------  TODO: Use pixels_between_points_2(), this one cannot 'miss' pixels
             xs,ys = get_coords(granule_fourier, get_relative=True)
+            # TODO: Add the scaling factor s/2 - 1/2 to border.
+            # TODO: Remove the scaling calculations from pixes_between_points. This can be done here or in another function.
             xs_pixels, ys_pixels = pixels_between_points(np.append(xs,xs[0]), np.append(ys,ys[0]), precision=100, scale_factor_x=scale_factor_width, scale_factor_y=scale_factor_height)
             coords_tuple = [(xs_pixels[i], ys_pixels[i]) for i in range(len(xs_pixels))]
             seen = set()
