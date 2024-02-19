@@ -2,13 +2,13 @@ import pandas as pd
 import numpy as np
 import math
 
-def get_coords(granule_fourier2: pd.DataFrame, get_relative=False, scale_factor=1):
+def get_coords(granule_fourier2: pd.DataFrame, get_relative=False):
     """Calculates the exact border coordinates for the given granule in an image
 
     Args:
         granule_fourier2 (pd.DataFrame): Granule in datarame
         get_relative (bool): If function should return coords relative to the granules bounding box and not the entire image. Useful for plottin granule cutouts from an image frame.
-        scale_factor (int): Scale the boundry. Default is 1. Useful for getting boundries of upsized granule cutouts.
+        REMOVE: scale_factor (int): Scale the boundry. Default is 1. Useful for getting boundries of upsized granule cutouts.
     Returns:
         Two lists, xs and ys, containing coords of boundry
     """
@@ -45,7 +45,7 @@ def get_coords(granule_fourier2: pd.DataFrame, get_relative=False, scale_factor=
         xs = scale*radii_12*np.sin(angles2)+y_pos2
         return xs, ys
 
-def pixels_between_points(xs: list[float], ys: list[float], precision: int = 5, scale_factor_x=1, scale_factor_y=1) -> list[list[int],list[int]]:
+def pixels_between_points_OLD(xs: list[float], ys: list[float], precision: int = 5, scale_factor_x=1, scale_factor_y=1) -> list[list[int],list[int]]:
     """
         From two lists, x and y-coords, returns every pixel intersected by the linesegments between the coordinates.
 
@@ -85,16 +85,16 @@ def pixels_between_points(xs: list[float], ys: list[float], precision: int = 5, 
 
 # ------------------------------------------------------------------
 
-def pixels_between_points_2(xs: list[float], ys: list[float]) -> tuple[list[int],list[int]]:
+def pixels_between_points(xs: list[float], ys: list[float]) -> tuple[list[int],list[int]]:
     assert len(xs) == len(ys), f"Coordinate lists must be of equal length, was xs={len(xs)}, ys={len(ys)}"
 
     x_pixels = np.array([])
     y_pixels = np.array([])
     for i in range(len(xs)-1):
-        x_0 = xs[i]
-        y_0 = ys[i]
-        x_1 = xs[i+1]
-        y_1 = ys[i+1]
+        x_0 = xs[i]   + 1/2 # 1/2 is added to translate points from "center" based integer coordinates, to "corner" based coordinates.
+        y_0 = ys[i]   + 1/2  
+        x_1 = xs[i+1] + 1/2 
+        y_1 = ys[i+1] + 1/2 
 
         xs_intersected, ys_intersected = intersect(x_0, y_0, x_1, y_1)
         x_pixels = np.append(x_pixels, xs_intersected)

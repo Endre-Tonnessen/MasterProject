@@ -3,17 +3,6 @@
 # Upscaling Changes - TODO
 Instead of upscaling a granule to 1024x1024, irrespective of previous image shape. Upscale to closest multiple, ensuring the original aspect ratio is preserved.
 Any space left can be padded, or we simply ignore it allowing YOLOv8 to do the scaling.
- 
-
-## Upscaling offset bug - DONE?
-Create a small 10x10 picture. Create a square of 400 points. Upscale and calculate where the points should land and which pixel that is.
-Verify that they are where they should be in the picture.
-
-We solved this. Granule explorer uses map_coordinates(order=0) from scipy that treats pixels as having their interger coordinates in the center. Pushing the entire image by -1/2, introducing weird offset settings.
-
-# get_intersected_pixels() - ASK JACK
-Edge case when line is directly in the middle of pixels. Which ones do we pick? 
-    - Suggestion: Add a small value 0.0001 prevent this. Will introduce some bias? Need bias anyway?
 
 ## Granule Explorer Integration - TODO
 
@@ -39,3 +28,14 @@ Need to make a better dataset for training. Current training set is composed fro
     * Outputs image with just the border pixels having values of 1. Rest of image is 0.
     * Might have to redo parts of the get_fourier_terms() function to account for up- and downscaling of image and border.
         * Also a question if current boundry storing method supports funny-shaped granules at all. Jack will look into this.
+
+
+## Upscaling offset bug - DONE
+Create a small 10x10 picture. Create a square of 400 points. Upscale and calculate where the points should land and which pixel that is.
+Verify that they are where they should be in the picture.
+
+We solved this. Granule explorer uses map_coordinates(order=0) from scipy that treats pixels as having their interger coordinates in the center. Pushing the entire image by -1/2, introducing weird offset settings.
+
+# get_intersected_pixels() - DONE
+Edge case when line is directly in the middle of pixels. Which ones do we pick? 
+    - Suggestion: Add a small value 0.0001 prevent this. Will introduce some bias? Need bias anyway?

@@ -1,4 +1,3 @@
-import dataset_creation.helper_functions.frame_gen as fg
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -13,14 +12,17 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from dataset_creation.helper_functions.helper_functions import get_coords, pixels_between_points
+from helper_functions.helper_functions import get_coords, pixels_between_points
+# from dataset_creation.helper_functions.helper_functions import get_coords, pixels_between_points
+from helper_functions import frame_gen as fg
+# import dataset_creation.helper_functions.frame_gen as fg
 
 import pathlib
 import platform
 plt2 = platform.system()
 if plt2 == 'Windows': pathlib.PosixPath = pathlib.WindowsPath
 
-def plot(granule_cutout_image, upscaled_image, granule_fourier, valid_granule_id, scale_factor_width, scale_factor_height):
+def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs, ys, xs_upscaled, ys_upscaled):
     fig = make_subplots(rows=1, cols=2, 
                     horizontal_spacing=0.05, 
                     vertical_spacing=0.1,
@@ -29,25 +31,16 @@ def plot(granule_cutout_image, upscaled_image, granule_fourier, valid_granule_id
     base_image_fig = px.imshow(granule_cutout_image)
     fig.add_trace(base_image_fig.data[0], 1, 1)                
     # Calculate and draw boundry for first plot
-    xs,ys = get_coords(granule_fourier, get_relative=True)
-    xs2, ys2 = pixels_between_points(np.round(np.append(xs,xs[0]),0),np.round(np.append(ys,ys[0]),0), precision=10)
-    fig.add_trace(go.Scatter(x=np.append(xs,xs[0]), y=np.append(ys,ys[0]), marker=dict(color='lightgreen', size=16), name=f"400 p border {valid_granule_id}"), row=1, col=1)
-    fig.add_trace(go.Scatter(x=xs2,y=ys2, marker=dict(color='cyan', size=16), name=f"True pixel border {valid_granule_id}"), row=1, col=1)
+    xs_pixels, ys_pixels = pixels_between_points(xs, ys)
+    fig.add_trace(go.Scatter(x=xs, y=ys, marker=dict(color='red', size=16), name=f"400 p border {valid_granule_id}"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=1)
 
     upscaled_image_fig = px.imshow(upscaled_image)
     fig.add_trace(upscaled_image_fig.data[0], 1, 2)
-    # Add borders for upscaled images
-    xs3, ys3 = pixels_between_points(np.append(xs,xs[0]), np.append(ys,ys[0]), precision=100, scale_factor_x=scale_factor_width, scale_factor_y=scale_factor_height)
-    coords_tuple = [(xs3[i], ys3[i]) for i in range(len(ys3))]
-    # print("Length:", len(coords_))
-    seen = set()
-    coords_set = [x for x in coords_tuple if x not in seen and not seen.add(x)]
-    xs3 = [xy[0] for xy in coords_set]
-    ys3 = [xy[1] for xy in coords_set]
-    # print("Length:", len(result))
 
-    fig.add_trace(go.Scatter(x=np.append(xs,xs[0])*scale_factor_width, y=np.append(ys,ys[0])*scale_factor_height, marker=dict(color='lightgreen', size=16), name=f"100 p border {valid_granule_id}"), row=1, col=2)
-    fig.add_trace(go.Scatter(x=xs3, y=ys3, marker=dict(color='cyan', size=16), name=f"True pixel border {valid_granule_id}"), row=1, col=2)
+    xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
+    fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=2)
+    fig.add_trace(go.Scatter(x=xs_upscaled, y=ys_upscaled, marker=dict(color='red', size=16), name=f"400p upscaled border3 {valid_granule_id}"), row=1, col=2)
     
     fig.update_layout(title_text=f"Granule {valid_granule_id}", title_x=0.5, showlegend=False, font_size=11)
     fig.update_yaxes(autorange='reversed') # Ensure granules are not flipped. Plotly has strange axis direction defaults...
@@ -71,7 +64,8 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
     for frame in image_gen: 
         # frame: fg.MicroscopeFrame = next(image_gen)
         frame_id = frame.frame_num
-
+        if frame_id % 50 == 0:
+            print("Frame id:", frame_id)
         valid_granule_fourier = image_analysed_results_df[(image_analysed_results_df['valid'] == True) & (image_analysed_results_df['frame'] == frame_id)]['granule_id']
         valid_granule_ids = valid_granule_fourier.unique()
 
@@ -92,35 +86,41 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             NEW_MAX_HEIGHT = 1024
             original_image = Image.fromarray(granule_cutout_image)
             original_width, original_height = original_image.size
-            scale_factor_height = NEW_MAX_HEIGHT / original_height
-            scale_factor_width = NEW_MAX_WIDTH / original_width
-            assert scale_factor_height*original_height == NEW_MAX_HEIGHT, f"Should be {NEW_MAX_HEIGHT} was {scale_factor_height*original_height}"
-            assert scale_factor_width*original_width == NEW_MAX_WIDTH, f"Should be {NEW_MAX_WIDTH} was {scale_factor_width*original_width}"
+            scale_factor_height_y = NEW_MAX_HEIGHT / original_height
+            scale_factor_width_x = NEW_MAX_WIDTH / original_width
+            assert scale_factor_height_y*original_height == NEW_MAX_HEIGHT, f"Should be {NEW_MAX_HEIGHT} was {scale_factor_height_y*original_height}"
+            assert scale_factor_width_x*original_width == NEW_MAX_WIDTH, f"Should be {NEW_MAX_WIDTH} was {scale_factor_width_x*original_width}"
+            # ------------------- Rescale image ------------------- 
+            upscaled_image = np.array(original_image.resize((NEW_MAX_WIDTH, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST))
             # ------------------- Add scaling info to df ------------------- TODO: Might not need this
-            scaling_dict['x_width_scale'].append(scale_factor_width)
-            scaling_dict['y_height_scale'].append(scale_factor_height)
+            scaling_dict['x_width_scale'].append(scale_factor_width_x)
+            scaling_dict['y_height_scale'].append(scale_factor_height_y)
             scaling_dict['x_width_original_pixels'].append(original_width)
             scaling_dict['y_height_original_pixels'].append(original_height)
             scaling_dict['granule_id'].append(valid_granule_id)
             scaling_dict['frame_id'].append(frame_id)
             scaling_dict['origin_filename'].append(image_filename)
-            # ------------------- Rescale image ------------------- 
-            upscaled_image = np.array(original_image.resize((NEW_MAX_WIDTH, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST)) 
             # ------------------- Get pixel boundry -------------------  TODO: Use pixels_between_points_2(), this one cannot 'miss' pixels
-            xs,ys = get_coords(granule_fourier, get_relative=True)
+            xs, ys = get_coords(granule_fourier, get_relative=True)
+            xs = np.append(xs,xs[0]) # Add connection from last element to start element
+            ys = np.append(ys,ys[0])
+            # --- Scale boundry points ---
+            xs_upscaled = xs * scale_factor_width_x + scale_factor_width_x / 2 - 1/2 
+            ys_upscaled = ys * scale_factor_height_y + scale_factor_height_y / 2 - 1/2
             # TODO: Add the scaling factor s/2 - 1/2 to border.
             # TODO: Remove the scaling calculations from pixes_between_points. This can be done here or in another function.
-            xs_pixels, ys_pixels = pixels_between_points(np.append(xs,xs[0]), np.append(ys,ys[0]), precision=100, scale_factor_x=scale_factor_width, scale_factor_y=scale_factor_height)
+            xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
             coords_tuple = [(xs_pixels[i], ys_pixels[i]) for i in range(len(xs_pixels))]
             seen = set()
-            coords_set = [x for x in coords_tuple if x not in seen and not seen.add(x)]
+            coords_set = [x for x in coords_tuple if x not in seen and not seen.add(x)] # TODO: Might not be needed, pixels_between_points cannot produce duplicate coords anymore? 
             xs = np.array([xy[0] for xy in coords_set])
             ys = np.array([xy[1] for xy in coords_set])
+            # assert len(xs_pixels) == len(xs), f"They should have equal length {len(xs_pixels)} == {len(xs)}"
             # ------------------- Save label to .txt ------------------- 
             assert not granule_fourier.empty, "No fourier terms for valid granule. This should not be possible."
             # Create string, x0,y0,x1,y1,...,xn,yn 
             # This is the YOLOv8 segmentation mask format
-            zipped_normalized = list(zip(np.round(xs / 1024,5), np.round(ys / 1024, 5)))
+            zipped_normalized = list(zip(np.round(xs_pixels / 1024,5), np.round(ys_pixels / 1024, 5)))
             coord_string = ''.join(map(lambda xy: str(xy[0]) + " " + str(xy[1]) + " ", zipped_normalized))
             yolov8_granule_string = "0 " + coord_string + "\n" # 0 is the id of the class belonging to the mask created by the coords_string.
             origin_ims_file = Path(frame.im_path).stem
@@ -131,8 +131,8 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             plt.imsave(f"datasets/cutout_dataset/all_data/images/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
 
 
-            # plot(granule_cutout_image, upscaled_image, granule_fourier, valid_granule_id, scale_factor_width, scale_factor_height)
-        
+            # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs, ys, xs_upscaled, ys_upscaled)
+
         scaling_df: pd.DataFrame = pd.DataFrame(scaling_dict)
         scaling_df.to_csv("scaling_df.csv")
 
@@ -152,30 +152,33 @@ def split_data_train_val(training_ratio=10):
     img_files_train, img_files_val = split_list_by_nth(img_files, training_ratio)
     label_files_train, label_files_val = split_list_by_nth(label_files, training_ratio)
 
+    print("------------------ MOVING IMAGES ------------------")
     # ------------------- Move training images & labels -------------------
     for i in range(len(img_files_train)):
         old_path_img = os.path.join(image_path, img_files_train[i])
-        new_path_img = os.path.join(data_root+"train/images", img_files_train[i])    # Put files here
+        new_path_img = os.path.join(data_root+"images/train", img_files_train[i])    # Put files here
         assert img_files_train[i][:-4] == label_files_train[i][:-4], f"{i} - " + img_files_train[i][:-4] + "==" + label_files_train[i][:-4]
         shutil.copy(old_path_img, new_path_img)
 
         old_path_label = os.path.join(label_path, label_files_train[i])
-        new_path_label = os.path.join(data_root+"train/labels", label_files_train[i]) # Put files here
+        new_path_label = os.path.join(data_root+"labels/train", label_files_train[i]) # Put files here
         shutil.copy(old_path_label, new_path_label)
         # print(f'Copied: {old_path} -> {new_path}')
     
+    print("------------------ MOVING LABELS ------------------")
     # ------------------- Move val images & labels -------------------
     for i in range(len(img_files_val)):
         old_path_img = os.path.join(image_path, img_files_val[i])
-        new_path_img = os.path.join(data_root+"val/images", img_files_val[i])     # Put files here
+        new_path_img = os.path.join(data_root+"images/val", img_files_val[i])     # Put files here
         assert img_files_val[i][:-4] == label_files_val[i][:-4], f"{i} - " + img_files_val[i][:-4] + "==" + label_files_val[i][:-4]
         shutil.copy(old_path_img, new_path_img)
 
         old_path_label = os.path.join(label_path, label_files_val[i])
-        new_path_label = os.path.join(data_root+"val/labels", label_files_val[i]) # Put files here
+        new_path_label = os.path.join(data_root+"labels/val", label_files_val[i]) # Put files here
         shutil.copy(old_path_label, new_path_label)
         # print(f'Copied: {old_path} -> {new_path}')
 
+    print("------------------ DONE ------------------")
 
 def split_list_by_nth(list_to_split: list, split_number=10):
     """
@@ -197,7 +200,7 @@ if __name__ == "__main__":
     @fg.vmManager
     def main():
         # generate_granule_cutout_images()
-        # split_data_train_val(training_ratio=10)
+        split_data_train_val(training_ratio=10) # TODO: Fix this argument train/val percentage
         pass
 
     main()
