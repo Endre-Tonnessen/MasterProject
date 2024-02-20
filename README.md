@@ -6,18 +6,34 @@ Any space left can be padded, or we simply ignore it allowing YOLOv8 to do the s
 
 ## Granule Explorer Integration - TODO
 
-In `boundry_extraction.py` line 65, add a new _BoundaryExtractionGradient method for using a machine learning model.
-This call will return data in the same format as the others. 
-Must do some post-processing to get correct fourier terms from pixel mask output.
+Discuss `angle_sweep_scaling()` line 281, see line 340, `get_peak_location()` this needs to be scaled back down to original granule size.
+    -> Returns a float, a distance, how to scale?
 
-Maybe modify the top-level `manager.py` to include arguments for `image_processing` method. See line 144 and 148 in `process_image.py` for implementation.
-NOTE: ADDING OFFSET IS CORRECT!s
-TODO: order parameter in angle_sweep function on function map_cooridnates(order=0) to prevent cubic interlation. Cubic will interpolate, avarage between pixel values.
+    In `boundry_extraction.py` line 65, add a new _BoundaryExtractionGradient method for using a machine learning model.
+    This call will return data in the same format as the others. 
+    Must do some post-processing to get correct fourier terms from pixel mask output.
 
-When integrating the model, use onnex export format? Might be compatible with all model architectures, allowing tensorflow to run any model without installing all corresponding model frameworks. Could make integration easier.
+    Maybe modify the top-level `manager.py` to include arguments for `image_processing` method. See line 144 and 148 in `process_image.py` for implementation.
+    NOTE: ADDING OFFSET IS CORRECT!s
+    TODO: order parameter in angle_sweep function on function map_cooridnates(order=0) to prevent cubic interlation. Cubic will interpolate, avarage between pixel values.
+
+    When integrating the model, use onnex export format? Might be compatible with all model architectures, allowing tensorflow to run any model without installing all corresponding model frameworks. Could make integration easier.
 
 # Get more .ims files with corresponding .h5 analysis files - TODO
-Need to make a better dataset for training. Current training set is composed from only one .ims file. FIND .TXT FILE WITH EXPERIMENT NAME DATA Jack mentioned.
+Need to make a larger dataset for training. Current training set is composed from only one .ims file. FIND .TXT FILE WITH EXPERIMENT NAME DATA Jack mentioned.
+    -> Go over how to ssh into UIB servers and download files.
+    -> Unable to find file containing experiment names and their corresponding .ims files.
+
+        ssh eto033@login.uib.no # Microsoft
+        ssh endret@login.ii.uib.no # II password
+        ssh endret@kjempefuru.cbu.uib.no # II password
+        scp kjempefuru:/export/grellscheidfs/microscopy/2020-02-05/2020-02-05_15.11.08--NAs--T1354-GFP_Burst.ims ./data 
+
+        # From local console, run to grab ALL files in external folder and put it at current cmd location.
+        scp kjempefuru:/export/grellscheidfs/microscopy/2020-02-05/* .
+# What should the model predict?
+    -> Currently the model will make a prediction no matter how the granule looks. This can lead to undesirable results, we may not always want to classify every granules? Any we should exclude?
+
 
 # Plan v2
 
@@ -39,3 +55,10 @@ We solved this. Granule explorer uses map_coordinates(order=0) from scipy that t
 # get_intersected_pixels() - DONE
 Edge case when line is directly in the middle of pixels. Which ones do we pick? 
     - Suggestion: Add a small value 0.0001 prevent this. Will introduce some bias? Need bias anyway?
+
+
+# Thesis
+
+Paper: https://arxiv.org/abs/2305.09972
+-> Have a look at feature maps, displaying how the model views the image at different layers.
+    -> Can explain class confusion. Ofcourse i only have 1 class currently...
