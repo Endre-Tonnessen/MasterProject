@@ -1,13 +1,11 @@
-# Plan
+# Tasks
 
-# Upscaling Changes - TODO
-Instead of upscaling a granule to 1024x1024, irrespective of previous image shape. Upscale to closest multiple, ensuring the original aspect ratio is preserved.
-Any space left can be padded, or we simply ignore it allowing YOLOv8 to do the scaling.
 
 ## Granule Explorer Integration - TODO
 
+    Almost done, one last scaling bug to fix.
+
 Discuss `angle_sweep_scaling()` line 281, see line 340, `get_peak_location()` this needs to be scaled back down to original granule size.
-    -> Returns a float, a distance, how to scale?
 
     In `boundry_extraction.py` line 65, add a new _BoundaryExtractionGradient method for using a machine learning model.
     This call will return data in the same format as the others. 
@@ -19,7 +17,19 @@ Discuss `angle_sweep_scaling()` line 281, see line 340, `get_peak_location()` th
 
     When integrating the model, use onnex export format? Might be compatible with all model architectures, allowing tensorflow to run any model without installing all corresponding model frameworks. Could make integration easier.
 
-# Get more .ims files with corresponding .h5 analysis files - TODO
+# Modify model architectures - Maybe
+    Training data consists of 1 color-channel images (Grayscale, (h,w)). The segementation models want 3 channel images, RGB. Currently there is a conversion between the formats, however this is technically redundant. 
+
+    Proposal: Modify input layer of YOLOv8 to handle (H,W,1) size images. Modify training functions to account for this.  
+
+
+# Upscaling Changes - MAYBE/TODO
+    Instead of upscaling a granule to 1024x1024, irrespective of previous image shape. Upscale to closest multiple, ensuring the original aspect ratio is preserved.
+    Any space left can be padded, or we simply ignore it allowing YOLOv8 to do the scaling.
+
+
+
+# Get more .ims files with corresponding .h5 analysis files - DONE
 Need to make a larger dataset for training. Current training set is composed from only one .ims file. FIND .TXT FILE WITH EXPERIMENT NAME DATA Jack mentioned.
     -> Go over how to ssh into UIB servers and download files.
     -> Unable to find file containing experiment names and their corresponding .ims files.
@@ -31,9 +41,10 @@ Need to make a larger dataset for training. Current training set is composed fro
 
         # From local console, run to grab ALL files in external folder and put it at current cmd location.
         scp kjempefuru:/export/grellscheidfs/microscopy/2020-02-05/* .
-# What should the model predict?
-    -> Currently the model will make a prediction no matter how the granule looks. This can lead to undesirable results, we may not always want to classify every granules? Any we should exclude?
 
+# What should the model predict? - DONE
+    -> Currently the model will make a prediction no matter how the granule looks. This can lead to undesirable results, we may not always want to classify every granules? Any we should exclude?
+*No changes needed*
 
 # Plan v2
 

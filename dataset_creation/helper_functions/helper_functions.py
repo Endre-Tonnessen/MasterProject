@@ -100,9 +100,20 @@ def pixels_between_points(xs: list[float], ys: list[float]) -> tuple[list[int],l
         x_pixels = np.append(x_pixels, xs_intersected)
         y_pixels = np.append(y_pixels, ys_intersected)
 
-    return x_pixels, y_pixels # Do floor instead. Remove 1/2 from the phi offset.    
+    return x_pixels, y_pixels  
 
-def intersect(x_0, y_0, x_1, y_1): #TODO: Add 1/2 to input coordinates. This can be done in this function, translating the input coordinates to 'corner centered' instead.
+def intersect(x_0, y_0, x_1, y_1):
+    """Finds pixels intersected by a line created by the two input points, (x_0, y_0) and (x_1, y_1).
+
+    Args:
+        x_0 (_type_): _description_
+        y_0 (_type_): _description_
+        x_1 (_type_): _description_
+        y_1 (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     # https://gamedev.stackexchange.com/questions/81267/how-do-i-generalise-bresenhams-line-algorithm-to-floating-point-endpoints
     # https://jsfiddle.net/6x7t4q1o/5
     # Made by Andrew?
@@ -160,6 +171,7 @@ def intersect(x_0, y_0, x_1, y_1): #TODO: Add 1/2 to input coordinates. This can
             y += stepY
     return x_pixels, y_pixels
 
+# ------------------------------------------------------------------
   
 
 def verifyLoS(x_0, y_0, x_1, y_1): 
