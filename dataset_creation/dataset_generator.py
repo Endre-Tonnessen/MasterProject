@@ -5,6 +5,7 @@ import pandas as pd
 from PIL import Image
 import os
 import shutil
+import tqdm
 
 import bioformats as bf
 import javabridge
@@ -61,11 +62,18 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
 
     scaling_dict = {'x_width_scale':[], 'y_height_scale':[], 'x_width_original_pixels':[], 'y_height_original_pixels':[], 'granule_id':[], 'frame_id':[], 'origin_filename':[]}
    
-    for frame in image_gen: 
+    process_bar = tqdm.tqdm(enumerate(image_gen))
+    for frame_num, frame in process_bar:
+        # Update the progress bar to account for the number of frames
+        if frame_num == 0:
+            total_frames = frame.total_frames
+            process_bar.reset(total_frames)
+
+    # for frame in image_gen: 
         # frame: fg.MicroscopeFrame = next(image_gen)
         frame_id = frame.frame_num
-        if frame_id % 50 == 0:
-            print("Frame id:", frame_id)
+        # if frame_id % 50 == 0:
+        #     print("Frame id:", frame_id)
         valid_granule_fourier = image_analysed_results_df[(image_analysed_results_df['valid'] == True) & (image_analysed_results_df['frame'] == frame_id)]['granule_id']
         valid_granule_ids = valid_granule_fourier.unique()
 
@@ -107,8 +115,6 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             # --- Scale boundry points ---
             xs_upscaled = xs * scale_factor_width_x + scale_factor_width_x / 2 - 1/2 
             ys_upscaled = ys * scale_factor_height_y + scale_factor_height_y / 2 - 1/2
-            # TODO: Add the scaling factor s/2 - 1/2 to border.
-            # TODO: Remove the scaling calculations from pixes_between_points. This can be done here or in another function.
             xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
             coords_tuple = [(xs_pixels[i], ys_pixels[i]) for i in range(len(xs_pixels))]
             seen = set()
@@ -201,7 +207,7 @@ if __name__ == "__main__":
     def main():
         # generate_granule_cutout_images()
         split_data_train_val(training_ratio=10) # TODO: Fix this argument train/val percentage
-        pass
+        # pass
 
     main()
 
