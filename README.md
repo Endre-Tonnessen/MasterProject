@@ -1,5 +1,16 @@
 # Tasks
 
+# When scaling image in GE, presever the aspect ratio of the granule, to make the angle even.
+
+# Possible problem with np.argmax in sample_at_angle()
+In the event of more than one possible boundry, it seems to return the last boundry and not the first one. (We want the first boundry)
+See file:///C:/Users/Endre/Desktop/boundry_images/5.html
+
+# Do IoU to find how similar they are, and check for glitching (Large deviantion of IoU)
+
+# Compare granule by granule, id should be the same (check center to verify that the granule is avtually the granule)
+Check if both suface tentions error bars are within both ranges. 
+
 
 ## Granule Explorer Integration - TODO
 
