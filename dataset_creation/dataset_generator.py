@@ -2,10 +2,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageOps
 import os
 import shutil
 import tqdm
+import cv2
 
 import bioformats as bf
 import javabridge
@@ -23,12 +24,14 @@ import platform
 plt2 = platform.system()
 if plt2 == 'Windows': pathlib.PosixPath = pathlib.WindowsPath
 
-def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs, ys, xs_upscaled, ys_upscaled):
+def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier):
     fig = make_subplots(rows=1, cols=2, 
                     horizontal_spacing=0.05, 
                     vertical_spacing=0.1,
                     subplot_titles=('Standard image', 'Upscale Nearest'))
-    
+    xs, ys = get_coords(granule_fourier, get_relative=True)
+    xs = np.append(xs,xs[0])
+    ys = np.append(ys,ys[0])
     base_image_fig = px.imshow(granule_cutout_image)
     fig.add_trace(base_image_fig.data[0], 1, 1)                
     # Calculate and draw boundry for first plot
@@ -59,8 +62,6 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
     image_gen = fg.bioformatsGen(image_path)
     # dataframe with analysis results from .ims file
     image_analysed_results_df = pd.read_hdf(Path(project_dir / "data/Analysis_data/2020-02-05_15.41.32-NAs-T1354-GFP_Burst.h5"), mode="r", key="fourier")
-
-    scaling_dict = {'x_width_scale':[], 'y_height_scale':[], 'x_width_original_pixels':[], 'y_height_original_pixels':[], 'granule_id':[], 'frame_id':[], 'origin_filename':[]}
    
     process_bar = tqdm.tqdm(enumerate(image_gen))
     for frame_num, frame in process_bar:
@@ -69,13 +70,10 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             total_frames = frame.total_frames
             process_bar.reset(total_frames)
 
-    # for frame in image_gen: 
-        # frame: fg.MicroscopeFrame = next(image_gen)
         frame_id = frame.frame_num
-        # if frame_id % 50 == 0:
-        #     print("Frame id:", frame_id)
         valid_granule_fourier = image_analysed_results_df[(image_analysed_results_df['valid'] == True) & (image_analysed_results_df['frame'] == frame_id)]['granule_id']
         valid_granule_ids = valid_granule_fourier.unique()
+        image_data = frame.im_data
 
         for valid_granule_id in valid_granule_ids: # For each valid granule in frame
         # for valid_granule_id in [5]: # For each valid granule in frame
@@ -86,42 +84,14 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             bbox_right = granule_fourier['bbox_right'].iloc[0]
             bbox_top = granule_fourier['bbox_top'].iloc[0]
             bbox_bottom = granule_fourier['bbox_bottom'].iloc[0]
-            
-            image_data = frame.im_data
             granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
-            # ------------------- Scaling the granule cutout ------------------- TODO: Make scaling preserve original cutout ratio
-            NEW_MAX_WIDTH = 1024
-            NEW_MAX_HEIGHT = 1024
+            # ------------------- Scaling the granule cutout ------------------- 
             original_image = Image.fromarray(granule_cutout_image)
-            original_width, original_height = original_image.size
-            scale_factor_height_y = NEW_MAX_HEIGHT / original_height
-            scale_factor_width_x = NEW_MAX_WIDTH / original_width
-            assert scale_factor_height_y*original_height == NEW_MAX_HEIGHT, f"Should be {NEW_MAX_HEIGHT} was {scale_factor_height_y*original_height}"
-            assert scale_factor_width_x*original_width == NEW_MAX_WIDTH, f"Should be {NEW_MAX_WIDTH} was {scale_factor_width_x*original_width}"
-            # ------------------- Rescale image ------------------- 
-            upscaled_image = np.array(original_image.resize((NEW_MAX_WIDTH, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST))
-            # ------------------- Add scaling info to df ------------------- TODO: Might not need this
-            scaling_dict['x_width_scale'].append(scale_factor_width_x)
-            scaling_dict['y_height_scale'].append(scale_factor_height_y)
-            scaling_dict['x_width_original_pixels'].append(original_width)
-            scaling_dict['y_height_original_pixels'].append(original_height)
-            scaling_dict['granule_id'].append(valid_granule_id)
-            scaling_dict['frame_id'].append(frame_id)
-            scaling_dict['origin_filename'].append(image_filename)
-            # ------------------- Get pixel boundry -------------------  TODO: Use pixels_between_points_2(), this one cannot 'miss' pixels
-            xs, ys = get_coords(granule_fourier, get_relative=True)
-            xs = np.append(xs,xs[0]) # Add connection from last element to start element
-            ys = np.append(ys,ys[0])
-            # --- Scale boundry points ---
-            xs_upscaled = xs * scale_factor_width_x + scale_factor_width_x / 2 - 1/2 
-            ys_upscaled = ys * scale_factor_height_y + scale_factor_height_y / 2 - 1/2
+            upscaled_image, xs_upscaled, ys_upscaled = scale_padding(original_image, granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
+
             xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
-            coords_tuple = [(xs_pixels[i], ys_pixels[i]) for i in range(len(xs_pixels))]
-            seen = set()
-            coords_set = [x for x in coords_tuple if x not in seen and not seen.add(x)] # TODO: Might not be needed, pixels_between_points cannot produce duplicate coords anymore? 
-            xs = np.array([xy[0] for xy in coords_set])
-            ys = np.array([xy[1] for xy in coords_set])
-            # assert len(xs_pixels) == len(xs), f"They should have equal length {len(xs_pixels)} == {len(xs)}"
+            assert len(xs_pixels) == len(ys_pixels), f"They should have equal length {len(xs_pixels)} == {len(ys_pixels)}"
+
             # ------------------- Save label to .txt ------------------- 
             assert not granule_fourier.empty, "No fourier terms for valid granule. This should not be possible."
             # Create string, x0,y0,x1,y1,...,xn,yn 
@@ -136,13 +106,14 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
             # ------------------- Save granule_cutout to .png ------------------- 
             plt.imsave(f"datasets/cutout_dataset/all_data/images/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
 
+            # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
+            # if frame_id == 1:
+            #     return
 
-            # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs, ys, xs_upscaled, ys_upscaled)
-
-        scaling_df: pd.DataFrame = pd.DataFrame(scaling_dict)
-        scaling_df.to_csv("scaling_df.csv")
 
     print("------------------ DONE ------------------")
+
+
 
 def split_data_train_val(training_ratio=10):
     """ Split images and labels from source folders into training and validation folders """
@@ -158,7 +129,7 @@ def split_data_train_val(training_ratio=10):
     img_files_train, img_files_val = split_list_by_nth(img_files, training_ratio)
     label_files_train, label_files_val = split_list_by_nth(label_files, training_ratio)
 
-    print("------------------ MOVING IMAGES ------------------")
+    print("------------------ MOVING TRAINING DATA ------------------")
     # ------------------- Move training images & labels -------------------
     for i in range(len(img_files_train)):
         old_path_img = os.path.join(image_path, img_files_train[i])
@@ -171,7 +142,7 @@ def split_data_train_val(training_ratio=10):
         shutil.copy(old_path_label, new_path_label)
         # print(f'Copied: {old_path} -> {new_path}')
     
-    print("------------------ MOVING LABELS ------------------")
+    print("------------------ MOVING VAL DATA ------------------")
     # ------------------- Move val images & labels -------------------
     for i in range(len(img_files_val)):
         old_path_img = os.path.join(image_path, img_files_val[i])
@@ -200,6 +171,48 @@ def split_list_by_nth(list_to_split: list, split_number=10):
             files_train.append(list_to_split[i])
     return files_train, files_val
 
+
+def scale_stretch(original_image: Image, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> np.array:
+    """Stretches the image to new given size, irrespective of original aspect ratio.
+
+    Args:
+        original_image (Image): Image to stretch
+        NEW_MAX_HEIGHT (int, optional): _description_. Defaults to 1024.
+        NEW_MAX_WIDTH (int, optional): _description_. Defaults to 1024.
+
+    Returns:
+        np.array: Resized image
+    """
+    return np.array(original_image.resize((NEW_MAX_HEIGHT, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST))
+
+def scale_padding(original_image: Image, granule_fourier: pd.DataFrame, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> tuple[np.array, np.array, np.array]:
+    # ------------------- Upscale image -------------------
+    cutout_height, cutout_width = np.array(original_image).shape[:2]
+    max_scale_height = int(np.floor(NEW_MAX_HEIGHT / cutout_height))
+    max_scale_width  = int(np.floor(NEW_MAX_WIDTH / cutout_width))
+    scale_factor = min(max_scale_height, max_scale_width) # Max amount to scale by while keeping aspect ratio
+    upscaled_image = original_image.resize((cutout_width*scale_factor, cutout_height*scale_factor), resample=Image.Resampling.NEAREST)
+    # ------------------- Add padding -------------------
+    image_width, image_height = upscaled_image.size
+    delta_w = NEW_MAX_WIDTH - image_width
+    delta_h = NEW_MAX_HEIGHT - image_height
+    padding = (delta_w//2, delta_h//2, delta_w-(delta_w//2), delta_h-(delta_h//2))
+    new_im = ImageOps.expand(upscaled_image, padding)
+    # ------------------- Get pixel border -------------------
+    xs, ys = get_coords(granule_fourier, get_relative=True)
+    xs = np.append(xs,xs[0]) # Add connection from last element to start element
+    ys = np.append(ys,ys[0])
+    # --- Scale border points ---
+    xs_upscaled = xs * scale_factor + scale_factor / 2 - 1/2 
+    ys_upscaled = ys * scale_factor + scale_factor / 2 - 1/2
+    # --- Scale border points ---
+    xs_upscaled += delta_w // 2
+    ys_upscaled += delta_h // 2
+    upscaled_width, upscaled_height = new_im.size
+    assert (upscaled_width, upscaled_height) == (NEW_MAX_WIDTH, NEW_MAX_HEIGHT), f"Should be {(NEW_MAX_WIDTH, NEW_MAX_HEIGHT)} == {(upscaled_width, upscaled_height)}"
+    
+    return np.array(new_im), xs_upscaled, ys_upscaled
+
 if __name__ == "__main__":
     fg.startVM()
 
@@ -212,3 +225,13 @@ if __name__ == "__main__":
     main()
 
 
+
+    # coords_tuple = [(xs_pixels[i], ys_pixels[i]) for i in range(len(xs_pixels))]
+    # seen = set()
+    # coords_set = [x for x in coords_tuple if x not in seen and not seen.add(x)] # TODO: Might not be needed, pixels_between_points cannot produce duplicate coords anymore? 
+    # xs = np.array([xy[0] for xy in coords_set])
+    # ys = np.array([xy[1] for xy in coords_set])
+
+    # scaling_dict = {'x_width_scale':[], 'y_height_scale':[], 'x_width_original_pixels':[], 'y_height_original_pixels':[], 'granule_id':[], 'frame_id':[], 'origin_filename':[]}
+    # scaling_df: pd.DataFrame = pd.DataFrame(scaling_dict)
+    # scaling_df.to_csv("scaling_df.csv")
