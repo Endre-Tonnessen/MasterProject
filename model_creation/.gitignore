@@ -6,6 +6,9 @@ runs/segment/train/*
 runs/segment/train2/*
 runs/segment/train3/*
 runs/segment/train4/*
+runs/segment/train6/*
+runs/segment/train7/*
+runs/segment/train8/*
 *.pt
 yolov8_models
 yolov8_models/*.pt
