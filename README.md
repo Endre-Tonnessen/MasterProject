@@ -84,3 +84,7 @@ Edge case when line is directly in the middle of pixels. Which ones do we pick?
 Paper: https://arxiv.org/abs/2305.09972
 -> Have a look at feature maps, displaying how the model views the image at different layers.
     -> Can explain class confusion. Ofcourse i only have 1 class currently...
+
+
+# Notes: 12.03.2024
+# TODO: Add filters from Granule Explorer into GE Viz comparision. Filters passrate, tensions, etc. Allows us to compare results on the relevant granules. Removes granules of one pixels...
