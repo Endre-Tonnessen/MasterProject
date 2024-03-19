@@ -1,10 +1,7 @@
 # Tasks
 
-# When scaling image in GE, presever the aspect ratio of the granule, to make the angle even.
-
-# Possible problem with np.argmax in sample_at_angle()
-In the event of more than one possible boundry, it seems to return the last boundry and not the first one. (We want the first boundry)
-See file:///C:/Users/Endre/Desktop/boundry_images/5.html
+# Notes: 12.03.2024
+# TODO: Add filters from Granule Explorer into GE Viz comparision. Filters passrate, tensions, etc. Allows us to compare results on the relevant granules. Removes granules of one pixels...
 
 # Do IoU to find how similar they are, and check for glitching (Large deviantion of IoU)
 
@@ -12,33 +9,34 @@ See file:///C:/Users/Endre/Desktop/boundry_images/5.html
 Check if both suface tentions error bars are within both ranges. 
 
 
-## Granule Explorer Integration - TODO
-
-    Almost done, one last scaling bug to fix.
-
-Discuss `angle_sweep_scaling()` line 281, see line 340, `get_peak_location()` this needs to be scaled back down to original granule size.
-
-    In `boundry_extraction.py` line 65, add a new _BoundaryExtractionGradient method for using a machine learning model.
-    This call will return data in the same format as the others. 
-    Must do some post-processing to get correct fourier terms from pixel mask output.
-
-    Maybe modify the top-level `manager.py` to include arguments for `image_processing` method. See line 144 and 148 in `process_image.py` for implementation.
-    NOTE: ADDING OFFSET IS CORRECT!s
-    TODO: order parameter in angle_sweep function on function map_cooridnates(order=0) to prevent cubic interlation. Cubic will interpolate, avarage between pixel values.
-
-    When integrating the model, use onnex export format? Might be compatible with all model architectures, allowing tensorflow to run any model without installing all corresponding model frameworks. Could make integration easier.
-
 # Modify model architectures - Maybe
     Training data consists of 1 color-channel images (Grayscale, (h,w)). The segementation models want 3 channel images, RGB. Currently there is a conversion between the formats, however this is technically redundant. 
 
     Proposal: Modify input layer of YOLOv8 to handle (H,W,1) size images. Modify training functions to account for this.  
 
+# Possible problem with np.argmax in sample_at_angle() - FIXED - Problem was interpolation, order was 1 instead of 0.
+In the event of more than one possible boundry, it seems to return the last boundry and not the first one. (We want the first boundry)
+See file:///C:/Users/Endre/Desktop/boundry_images/5.html
 
-# Upscaling Changes - MAYBE/TODO
+# Upscaling Changes - DONE
     Instead of upscaling a granule to 1024x1024, irrespective of previous image shape. Upscale to closest multiple, ensuring the original aspect ratio is preserved.
     Any space left can be padded, or we simply ignore it allowing YOLOv8 to do the scaling.
 
+## Granule Explorer Integration - DONE
 
+    Almost done, one last scaling bug to fix.
+
+    Discuss `angle_sweep_scaling()` line 281, see line 340, `get_peak_location()` this needs to be scaled back down to original granule size.
+
+        In `boundry_extraction.py` line 65, add a new _BoundaryExtractionGradient method for using a machine learning model.
+        This call will return data in the same format as the others. 
+        Must do some post-processing to get correct fourier terms from pixel mask output.
+
+        Maybe modify the top-level `manager.py` to include arguments for `image_processing` method. See line 144 and 148 in `process_image.py` for implementation.
+        NOTE: ADDING OFFSET IS CORRECT!s
+        TODO: order parameter in angle_sweep function on function map_cooridnates(order=0) to prevent cubic interlation. Cubic will interpolate, avarage between pixel values.
+
+        When integrating the model, use onnex export format? Might be compatible with all model architectures, allowing tensorflow to run any model without installing all corresponding model frameworks. Could make integration easier.
 
 # Get more .ims files with corresponding .h5 analysis files - DONE
 Need to make a larger dataset for training. Current training set is composed from only one .ims file. FIND .TXT FILE WITH EXPERIMENT NAME DATA Jack mentioned.
@@ -84,7 +82,3 @@ Edge case when line is directly in the middle of pixels. Which ones do we pick?
 Paper: https://arxiv.org/abs/2305.09972
 -> Have a look at feature maps, displaying how the model views the image at different layers.
     -> Can explain class confusion. Ofcourse i only have 1 class currently...
-
-
-# Notes: 12.03.2024
-# TODO: Add filters from Granule Explorer into GE Viz comparision. Filters passrate, tensions, etc. Allows us to compare results on the relevant granules. Removes granules of one pixels...

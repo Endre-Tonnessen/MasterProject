@@ -17,7 +17,9 @@ from plotly.subplots import make_subplots
 from helper_functions.helper_functions import get_coords, pixels_between_points
 # from dataset_creation.helper_functions.helper_functions import get_coords, pixels_between_points
 from helper_functions import frame_gen as fg
+from helper_functions.frame_gen import startVM, vmManager
 # import dataset_creation.helper_functions.frame_gen as fg
+from multiprocessing import Process, Queue
 
 import pathlib
 import platform
@@ -50,74 +52,117 @@ def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys
     fig.update_yaxes(autorange='reversed') # Ensure granules are not flipped. Plotly has strange axis direction defaults...
     fig.show()
 
+startVM()
 
+@vmManager
 def generate_granule_cutout_images(ims_file_directory_path: Path = "", 
                                    h5_analyzed_ims_data_path: Path = ""):
     """
     """
     current_file = Path(__file__).resolve() # TODO: FIX THIS PATH MESS
-    project_dir = current_file.parents[1] / "dataset_creation"
-    image_filename = "2020-02-05_15.41.32-NAs-T1354-GFP_Burst.ims"
-    image_path = project_dir / f"data/{image_filename}"
-    image_gen = fg.bioformatsGen(image_path)
-    # dataframe with analysis results from .ims file
-    image_analysed_results_df = pd.read_hdf(Path(project_dir / "data/Analysis_data/2020-02-05_15.41.32-NAs-T1354-GFP_Burst.h5"), mode="r", key="fourier")
-   
-    process_bar = tqdm.tqdm(enumerate(image_gen))
-    for frame_num, frame in process_bar:
-        # Update the progress bar to account for the number of frames
-        if frame_num == 0:
-            total_frames = frame.total_frames
-            process_bar.reset(total_frames)
+    project_dir = current_file.parents[1] / "dataset_creation/data/"
 
-        frame_id = frame.frame_num
-        valid_granule_fourier = image_analysed_results_df[(image_analysed_results_df['valid'] == True) & (image_analysed_results_df['frame'] == frame_id)]['granule_id']
-        valid_granule_ids = valid_granule_fourier.unique()
-        image_data = frame.im_data
+    image_files = [file[:-4] for file in os.listdir(f"{project_dir}\ALL_IMS")]
 
-        for valid_granule_id in valid_granule_ids: # For each valid granule in frame
-        # for valid_granule_id in [5]: # For each valid granule in frame
-            #  ------------------- Get boundry ------------------- 
-            granule_fourier = image_analysed_results_df[(image_analysed_results_df['granule_id'] == valid_granule_id) & (image_analysed_results_df['frame'] == frame_id)]
-            #  ------------------- Get image of granule ------------------- 
-            bbox_left = granule_fourier['bbox_left'].iloc[0]
-            bbox_right = granule_fourier['bbox_right'].iloc[0]
-            bbox_top = granule_fourier['bbox_top'].iloc[0]
-            bbox_bottom = granule_fourier['bbox_bottom'].iloc[0]
-            granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
-            # ------------------- Scaling the granule cutout ------------------- 
-            original_image = Image.fromarray(granule_cutout_image)
-            upscaled_image, xs_upscaled, ys_upscaled = scale_padding(original_image, granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
+    # processes: list[Process] = []
+    image_files_queue = Queue() 
+    for filename in image_files: # Populate Queue with filenames
+        image_files_queue.put(filename)
 
-            xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
-            assert len(xs_pixels) == len(ys_pixels), f"They should have equal length {len(xs_pixels)} == {len(ys_pixels)}"
+    processes = [Process(target=get_label_and_image, args=(project_dir, image_files_queue,)) for _ in range(6)]
 
-            # ------------------- Save label to .txt ------------------- 
-            assert not granule_fourier.empty, "No fourier terms for valid granule. This should not be possible."
-            # Create string, x0,y0,x1,y1,...,xn,yn 
-            # This is the YOLOv8 segmentation mask format
-            zipped_normalized = list(zip(np.round(xs_pixels / 1024,5), np.round(ys_pixels / 1024, 5)))
-            coord_string = ''.join(map(lambda xy: str(xy[0]) + " " + str(xy[1]) + " ", zipped_normalized))
-            yolov8_granule_string = "0 " + coord_string + "\n" # 0 is the id of the class belonging to the mask created by the coords_string.
-            origin_ims_file = Path(frame.im_path).stem
-            with open(f"datasets/cutout_dataset/all_data/labels/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.txt", "w+") as f:
-                f.write(''.join(yolov8_granule_string))
-                f.close()
-            # ------------------- Save granule_cutout to .png ------------------- 
-            plt.imsave(f"datasets/cutout_dataset/all_data/images/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+    for process in processes: 
+        process.start() # Start
 
-            # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
-            # if frame_id == 1:
-            #     return
+    for process in processes:
+        process.join()  # Stop
 
+    # process_bar_files = tqdm.tqdm(enumerate(image_files))
+    # for file_num, filename in process_bar_files:
+        # if file_num == 0:
+        #     process_bar_files.reset(file_num)
+    # for filename in image_files:
+    #     p1 = Process(target=get_label_and_image, args=(project_dir, filename))
+    #     processes.append(p1)
+    #     p1.start()
+                
+            # get_label_and_image(project_dir, filename)
+
+    # get_label_and_image(project_dir, "2020-02-05_14.20.33--NAs--T1354-GFP_Burst")
+    
+    # for p in processes: # Wait for end of all processes
+    #     p.join()
+            
 
     print("------------------ DONE ------------------")
 
 
+def get_label_and_image(project_dir, image_files_queue: Queue):
+        
+    while image_files_queue.qsize() > 0:
+        filename = image_files_queue.get()
+        print("Started with", filename)
+
+        image_path = project_dir / f"ALL_IMS/{filename}.ims"
+        image_gen = fg.bioformatsGen(image_path)
+        # dataframe with analysis results from .ims file
+        image_analysed_results_df = pd.read_hdf(Path(project_dir / f"ALL_FOURIER_h5/{filename}.h5"), mode="r", key="fourier")
+
+        process_bar = tqdm.tqdm(enumerate(image_gen))
+        for frame_num, frame in process_bar:
+            # Update the progress bar to account for the number of frames
+            if frame_num == 0:
+                total_frames = frame.total_frames
+                process_bar.reset(total_frames)
+        # for frame in image_gen:
+            frame_id = frame.frame_num
+            valid_granule_fourier = image_analysed_results_df[(image_analysed_results_df['valid'] == True) & (image_analysed_results_df['frame'] == frame_id)]
+            valid_granule_ids = valid_granule_fourier['granule_id'].unique()
+            image_data = frame.im_data
+
+            for valid_granule_id in valid_granule_ids: # For each valid granule in frame
+            # for valid_granule_id in [5]: # For each valid granule in frame
+                #  ------------------- Get boundry ------------------- 
+                granule_fourier = valid_granule_fourier[(valid_granule_fourier['granule_id'] == valid_granule_id) & (valid_granule_fourier['frame'] == frame_id)]
+                granule_fourier_old = image_analysed_results_df[(image_analysed_results_df['granule_id'] == valid_granule_id) & (image_analysed_results_df['frame'] == frame_id)]
+                assert all(granule_fourier['granule_id'].compare(granule_fourier_old['granule_id'])), "Not the same"
+                assert all(granule_fourier['granule_id'] == granule_fourier_old['granule_id']), "Not the same"
+                
+                #  ------------------- Get image of granule ------------------- 
+                bbox_left = granule_fourier['bbox_left'].iloc[0]
+                bbox_right = granule_fourier['bbox_right'].iloc[0]
+                bbox_top = granule_fourier['bbox_top'].iloc[0]
+                bbox_bottom = granule_fourier['bbox_bottom'].iloc[0]
+                granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
+                # ------------------- Scaling the granule cutout ------------------- 
+                original_image = Image.fromarray(granule_cutout_image)
+                upscaled_image, xs_upscaled, ys_upscaled = scale_padding(original_image, granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
+
+                xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
+                assert len(xs_pixels) == len(ys_pixels), f"They should have equal length {len(xs_pixels)} == {len(ys_pixels)}"
+
+                # ------------------- Save label to .txt ------------------- 
+                assert not granule_fourier.empty, "No fourier terms for valid granule. This should not be possible."
+                # Create string, x0,y0,x1,y1,...,xn,yn 
+                # This is the YOLOv8 segmentation mask format
+                zipped_normalized = list(zip(np.round(xs_pixels / 1024,6), np.round(ys_pixels / 1024, 6)))
+                coord_string = ''.join(map(lambda xy: str(xy[0]) + " " + str(xy[1]) + " ", zipped_normalized))
+                yolov8_granule_string = "0 " + coord_string + "\n" # 0 is the id of the class belonging to the mask created by the coords_string.
+                origin_ims_file = Path(frame.im_path).stem
+                with open(f"datasets/cutout_with_padding/all_data/labels/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.txt", "w+") as f:
+                    f.write(''.join(yolov8_granule_string))
+                    f.close()
+                # ------------------- Save granule_cutout to .png ------------------- 
+                plt.imsave(f"datasets/cutout_with_padding/all_data/images/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+
+                # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
+                # if frame_id == 1:
+                #     return
+
 
 def split_data_train_val(training_ratio=10):
     """ Split images and labels from source folders into training and validation folders """
-    data_root = "datasets/cutout_dataset/"
+    data_root = "datasets/cutout_with_padding/"
     label_path = data_root + "all_data/labels/" # Take files from here
     image_path = data_root + "all_data/images/" # Take files from here
 
@@ -218,8 +263,8 @@ if __name__ == "__main__":
 
     @fg.vmManager
     def main():
-        # generate_granule_cutout_images()
-        split_data_train_val(training_ratio=10) # TODO: Fix this argument train/val percentage
+        generate_granule_cutout_images()
+        # split_data_train_val(training_ratio=10) # TODO: Fix this argument train/val percentage
         # pass
 
     main()
