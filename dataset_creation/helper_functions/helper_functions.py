@@ -100,7 +100,8 @@ def pixels_between_points(xs: list[float], ys: list[float]) -> tuple[list[int],l
         x_pixels = np.append(x_pixels, xs_intersected)
         y_pixels = np.append(y_pixels, ys_intersected)
 
-    return x_pixels, y_pixels  
+    # return x_pixels, y_pixels  
+    return x_pixels.astype(int), y_pixels.astype(int)  
 
 def intersect(x_0, y_0, x_1, y_1):
     """Finds pixels intersected by a line created by the two input points, (x_0, y_0) and (x_1, y_1).
