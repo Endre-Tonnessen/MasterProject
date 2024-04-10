@@ -18,7 +18,8 @@ import gc         # garbage collect library
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from dataset import Dataset, get_preprocessing
 from plots import visualize, create_log_dict, log_training
-
+import time
+from datetime import timedelta
 torch.cuda.is_available()
 selected_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("TRAINING ON",selected_device)
@@ -33,7 +34,7 @@ Path("./MODELS").mkdir(parents=True, exist_ok=True)
 Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True)
 
 # -------- Dataset --------
-DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets"
+DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_tiny"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
 
@@ -49,7 +50,7 @@ y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 models = [smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet, smp.Unet]
 # models = [smp.Unet, smp.UnetPlusPlus, smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet]
 # ENCODERS = ['resnet34', 'resnet101', 'vgg16', 'mit_b1']
-ENCODERS = ['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
+ENCODERS = ['efficientnet-b0'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
 loss_functions = [DiceLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
 freeze = [True, False]
 
@@ -168,6 +169,21 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Save last model
     # torch.save(model, f"./MODELS/last_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}.pth")
 
+    # Test inference speed of best model
+    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}.pth")
+    cycles = 10
+    times = []
+    for i in range(cycles):
+        x = torch.from_numpy(train_dataset[i][0]).to(selected_device).unsqueeze(0)
+        # start = time.time()
+        starttime = time.perf_counter()
+        best_model.predict(x)
+        # end = time.time()
+        # times.append(end - start)
+        duration = time.perf_counter()-starttime
+        times.append(duration)
+    inference_time = np.mean(np.array(times))
+
     df = pd.DataFrame(df)
     # Calc # parameters in model
     decoder_total_params = sum(p.numel() for p in model.decoder.parameters())
@@ -181,6 +197,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     torch.cuda.reset_peak_memory_stats()
     # Add if encoder was freezed during training
     df['freeze_encoder'] = freeze_encoder
+    # Add estimated inference time
+    df['inference_time'] = inference_time
     # Save 
     df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.csv")
     
