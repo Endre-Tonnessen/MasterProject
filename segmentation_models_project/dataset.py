@@ -41,8 +41,10 @@ class Dataset(BaseDataset):
     def __getitem__(self, i):
         
         # read data
-        image = cv2.imread(self.images_fps[i])
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.imread(self.images_fps[i], cv2.IMREAD_UNCHANGED) # TODO: Add step turning RGB image to greyscale. Aka, load as greyscale
+        assert image.shape == (1024,1024)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) # <- Read as 1 channel!
         mask = cv2.imread(self.masks_fps[i], 0)
         # print(mask[524,524])
         
@@ -85,6 +87,6 @@ def get_preprocessing(preprocessing_fn):
     
     _transform = [
         albu.Lambda(image=preprocessing_fn),
-        albu.Lambda(image=to_tensor, mask=to_tensor),
+        albu.Lambda(image=to_tensor, mask=to_tensor), 
     ]
     return albu.Compose(_transform)

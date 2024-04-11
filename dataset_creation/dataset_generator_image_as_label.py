@@ -129,13 +129,13 @@ def get_label_and_image(project_dir, image_files_queue: Queue):
 
 def label_and_image_YOLOv8(project_dir, filename):
     image_path = str(project_dir) +"\\"+ f"ALL_IMS\\{filename}.ims"
-    # image_gen = fg.bioformatsGen(Path(image_path))
+    image_gen = fg.bioformatsGen(Path(image_path))
     # raise Exception("asd")
     # dataframe with analysis results from .ims file
     image_analysed_results_df = pd.read_hdf(Path(str(project_dir) +"/"+ f"ALL_FOURIER_h5/{filename}.h5"), mode="r", key="fourier")
 
-    # process_bar = tqdm.tqdm(enumerate(image_gen))
-    process_bar = tqdm.tqdm(enumerate(range(1000)))
+    process_bar = tqdm.tqdm(enumerate(image_gen))
+    # process_bar = tqdm.tqdm(enumerate(range(1000)))
     for frame_num, frame in process_bar:
         # Update the progress bar to account for the number of frames
         if frame_num == 0:
@@ -145,7 +145,7 @@ def label_and_image_YOLOv8(project_dir, filename):
         frame_id = frame_num
         valid_granule_fourier = image_analysed_results_df[(image_analysed_results_df['valid'] == True) & (image_analysed_results_df['frame'] == frame_id)]
         valid_granule_ids = valid_granule_fourier['granule_id'].unique()
-        # image_data = frame.im_data
+        image_data = frame.im_data
 
         for valid_granule_id in valid_granule_ids: # For each valid granule in frame
         # for valid_granule_id in [5]: # For each valid granule in frame
@@ -160,11 +160,12 @@ def label_and_image_YOLOv8(project_dir, filename):
             bbox_right = granule_fourier['bbox_right'].iloc[0]
             bbox_top = granule_fourier['bbox_top'].iloc[0]
             bbox_bottom = granule_fourier['bbox_bottom'].iloc[0]
-            # granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
+            granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
             # ------------------- Scaling the granule cutout ------------------- 
-            # original_image = Image.fromarray(granule_cutout_image)
+            original_image = Image.fromarray(granule_cutout_image)
             cutout_height, cutout_width = abs(bbox_left-bbox_right), abs(bbox_bottom - bbox_top)
-            upscaled_image, xs_upscaled, ys_upscaled = scale_padding((cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
+            upscaled_image, xs_upscaled, ys_upscaled = scale_padding(original_image, (cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
+            # upscaled_image, xs_upscaled, ys_upscaled = scale_padding((cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
 
             xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
             assert len(xs_pixels) == len(ys_pixels), f"They should have equal length {len(xs_pixels)} == {len(ys_pixels)}"
@@ -181,17 +182,20 @@ def label_and_image_YOLOv8(project_dir, filename):
             #     f.write(''.join(yolov8_granule_string))
             #     f.close()
             # ------------------- Save granule_cutout to .png ------------------- 
-            # plt.imsave(f"datasets/cutout_with_padding/all_data/images/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
-            border_image = np.zeros((1024,1024))
-            for i in range(len(xs_pixels)):
-                border_image[ys_pixels[i], xs_pixels[i]] = 1
-
-            flood_fill = ski.morphology.flood(border_image, (512,512), connectivity=1)
-            border_image[flood_fill == True] = 1
-
-            # plt.imsave(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image)
-            plt.imsave(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image)
+            # plt.imsave(f"datasets/cutout_with_padding/all_data/images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png.png", upscaled_image)
+            assert upscaled_image.shape == (1024,1024), f"Wrong shape, was {upscaled_image.shape} should be (1024,1024)"
+            cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+            # cv2.imwrite(f"datasets/cutout_with_padding/all_data/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+            # ------------------- Save label as image (.png) ------------------- 
+            # border_image = np.zeros((1024,1024))
+            # for i in range(len(xs_pixels)):
+            #     border_image[ys_pixels[i], xs_pixels[i]] = 1
+            # flood_fill = ski.morphology.flood(border_image, (512,512), connectivity=1)
+            # border_image[flood_fill == True] = 1
+            ### plt.imsave(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image)
+            # cv2.imwrite(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image) # TODO: Uncomment this
             # Might speed up saving: https://stackoverflow.com/questions/58231354/slow-matplotlib-savefig-to-png
+
             # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
             # return
             # if frame_id == 1:
@@ -199,8 +203,8 @@ def label_and_image_YOLOv8(project_dir, filename):
         
     # Clean up
     del image_analysed_results_df
-    # image_gen.close()
-    # del image_gen
+    image_gen.close()
+    del image_gen
 
 
 def split_data_train_val(training_ratio=10):
@@ -273,20 +277,20 @@ def scale_stretch(original_image: Image, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024
     """
     return np.array(original_image.resize((NEW_MAX_HEIGHT, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST))
 
-def scale_padding(original_image, granule_fourier: pd.DataFrame, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> tuple[np.array, np.array, np.array]:
+def scale_padding(original_image, img_dims: tuple[int,int], granule_fourier: pd.DataFrame, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> tuple[np.array, np.array, np.array]:
     # ------------------- Upscale image -------------------
-    cutout_height, cutout_width = original_image
+    cutout_height, cutout_width = img_dims
     max_scale_height = int(np.floor(NEW_MAX_HEIGHT / cutout_height))
     max_scale_width  = int(np.floor(NEW_MAX_WIDTH / cutout_width))
     scale_factor = min(max_scale_height, max_scale_width) # Max amount to scale by while keeping aspect ratio
-    # upscaled_image = original_image.resize((cutout_width*scale_factor, cutout_height*scale_factor), resample=Image.Resampling.NEAREST)
+    upscaled_image = original_image.resize((cutout_width*scale_factor, cutout_height*scale_factor), resample=Image.Resampling.NEAREST)
     # ------------------- Add padding -------------------
     # assert upscaled_image.size == (NEW_MAX_HEIGHT, NEW_MAX_WIDTH), f"New size of image is wrong. What? Was {upscaled_image.size} should be {NEW_MAX_HEIGHT, NEW_MAX_WIDTH}"
     image_width, image_height = (cutout_width*scale_factor, cutout_height*scale_factor)
     delta_w = NEW_MAX_WIDTH - image_width
     delta_h = NEW_MAX_HEIGHT - image_height
     padding = (delta_w//2, delta_h//2, delta_w-(delta_w//2), delta_h-(delta_h//2))
-    # new_im = ImageOps.expand(upscaled_image, padding)
+    new_im = ImageOps.expand(upscaled_image, padding)
     # ------------------- Get pixel border -------------------
     xs, ys = get_coords(granule_fourier, get_relative=True)
     xs = np.append(xs,xs[0]) # Add connection from last element to start element
@@ -297,11 +301,11 @@ def scale_padding(original_image, granule_fourier: pd.DataFrame, NEW_MAX_HEIGHT=
     # --- Scale border points ---
     xs_upscaled += delta_w // 2
     ys_upscaled += delta_h // 2
-    # upscaled_width, upscaled_height = new_im.size
-    # assert (upscaled_width, upscaled_height) == (NEW_MAX_WIDTH, NEW_MAX_HEIGHT), f"Should be {(NEW_MAX_WIDTH, NEW_MAX_HEIGHT)} == {(upscaled_width, upscaled_height)}"
+    upscaled_width, upscaled_height = new_im.size
+    assert (upscaled_width, upscaled_height) == (NEW_MAX_WIDTH, NEW_MAX_HEIGHT), f"Should be {(NEW_MAX_WIDTH, NEW_MAX_HEIGHT)} == {(upscaled_width, upscaled_height)}"
     
-    return None, xs_upscaled, ys_upscaled
-    # return np.array(new_im), xs_upscaled, ys_upscaled
+    # return None, xs_upscaled, ys_upscaled
+    return np.array(new_im), xs_upscaled, ys_upscaled
 
 if __name__ == "__main__":
     fg.startVM()

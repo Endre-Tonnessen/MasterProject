@@ -34,7 +34,7 @@ Path("./MODELS").mkdir(parents=True, exist_ok=True)
 Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True)
 
 # -------- Dataset --------
-DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_tiny"
+DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_medium"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
 
@@ -47,12 +47,12 @@ y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 
 #TODO: Implement Focal loss, use kaggle steel competition version
 
-models = [smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet, smp.Unet]
+models = [smp.UnetPlusPlus]#[smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet, smp.Unet]
 # models = [smp.Unet, smp.UnetPlusPlus, smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet]
 # ENCODERS = ['resnet34', 'resnet101', 'vgg16', 'mit_b1']
-ENCODERS = ['efficientnet-b0'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
-loss_functions = [DiceLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
-freeze = [True, False]
+ENCODERS = ['resnet34'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
+loss_functions = [JaccardLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
+freeze = [False] # True
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     torch.cuda.reset_peak_memory_stats()
@@ -71,6 +71,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         encoder_weights=ENCODER_WEIGHTS, # Pre-trained weights 
         classes=len(CLASSES), # Only one class, 'The granule'
         activation=ACTIVATION,
+        in_channels=1 # For grayscale
     )
     # ----- Skip training if already done -----
     potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.csv")
@@ -82,8 +83,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 
     train_dataset = Dataset(
-        x_test_dir, #x_train_dir, 
-        y_test_dir, #y_train_dir, 
+        x_train_dir, #x_test_dir, #x_train_dir, 
+        y_train_dir, #y_test_dir, #y_train_dir, 
         preprocessing=get_preprocessing(preprocessing_fn),
         classes=CLASSES,
     )
@@ -95,8 +96,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         classes=CLASSES,
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=3, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=3, shuffle=False, num_workers=0, drop_last=True)
 
     # for i in range(3):
     #     image, mask = train_dataset[i]
@@ -145,7 +146,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Create logging dict
     df = create_log_dict(metrics, loss_func)
 
-    for i in range(0, 10): # TODO: Implement early stopping
+    for i in range(0, 20): # TODO: Implement early stopping
         
         print('\nEpoch: {}'.format(i))
         # Logging
@@ -160,17 +161,17 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         # do something (save model, change lr, etc.)
         if max_score < valid_logs['iou_score']: 
             max_score = valid_logs['iou_score']
-            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}.pth")
+            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.pth")
             print('Model saved!')
             
         # if i == 7:
         #     optimizer.param_groups[0]['lr'] = 1e-5
         #     print('Decrease decoder learning rate to 1e-5!')
     # Save last model
-    # torch.save(model, f"./MODELS/last_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}.pth")
+    # torch.save(model, f"./MODELS/last_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()__Freeze_encoder_{freeze_encoder}}.pth")
 
     # Test inference speed of best model
-    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}.pth")
+    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.pth")
     cycles = 10
     times = []
     for i in range(cycles):
