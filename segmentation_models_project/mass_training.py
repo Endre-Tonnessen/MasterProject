@@ -34,7 +34,8 @@ Path("./MODELS").mkdir(parents=True, exist_ok=True)
 Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True)
 
 # -------- Dataset --------
-DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_medium"
+DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
+# DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_medium"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
 
@@ -45,12 +46,14 @@ x_test_dir = os.path.join(DATA_DIR, 'test/images')
 y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 
 
+CHANNELS_IN_IMAGE = 1
+
 #TODO: Implement Focal loss, use kaggle steel competition version
 
-models = [smp.UnetPlusPlus]#[smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet, smp.Unet]
+models = [smp.PSPNet, smp.PAN, smp.FPN, smp.Linknet, smp.MAnet, smp.Unet]
 # models = [smp.Unet, smp.UnetPlusPlus, smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet]
-# ENCODERS = ['resnet34', 'resnet101', 'vgg16', 'mit_b1']
-ENCODERS = ['resnet34'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
+ENCODERS = ['resnet34']#, 'resnet101', 'vgg16', 'mit_b1']
+# ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
 loss_functions = [JaccardLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
 freeze = [False] # True
 
@@ -71,7 +74,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         encoder_weights=ENCODER_WEIGHTS, # Pre-trained weights 
         classes=len(CLASSES), # Only one class, 'The granule'
         activation=ACTIVATION,
-        in_channels=1 # For grayscale
+        in_channels=CHANNELS_IN_IMAGE # For grayscale
     )
     # ----- Skip training if already done -----
     potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.csv")
@@ -85,19 +88,24 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     train_dataset = Dataset(
         x_train_dir, #x_test_dir, #x_train_dir, 
         y_train_dir, #y_test_dir, #y_train_dir, 
-        preprocessing=get_preprocessing(preprocessing_fn),
+        preprocessing=get_preprocessing(preprocessing_fn, CHANNELS_IN_IMAGE=CHANNELS_IN_IMAGE),
         classes=CLASSES,
+        CHANNELS_IN_IMAGE=1
     )
 
     valid_dataset = Dataset(
         x_valid_dir, 
         y_valid_dir, 
-        preprocessing=get_preprocessing(preprocessing_fn),
+        preprocessing=get_preprocessing(preprocessing_fn, CHANNELS_IN_IMAGE=CHANNELS_IN_IMAGE),
         classes=CLASSES,
+        CHANNELS_IN_IMAGE=1
     )
+    if CHANNELS_IN_IMAGE == 1:
+        assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
+        assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=3, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=3, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=8, shuffle=False, num_workers=0, drop_last=True)
 
     # for i in range(3):
     #     image, mask = train_dataset[i]
@@ -113,7 +121,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     ]
 
     optimizer = torch.optim.Adam([ 
-        dict(params=model.parameters(), lr=0.0001),
+        dict(params=model.parameters(), lr=0.0005),
     ])
     schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.9, mode="min", patience=3, verbose=True)
 
@@ -148,7 +156,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
 
     for i in range(0, 20): # TODO: Implement early stopping
         
-        print('\nEpoch: {}'.format(i))
+        print(f"\nEpoch: {i} | {model._get_name()}__{ENCODER}__{loss_func._get_name()}")
         # Logging
         train_logs = train_epoch.run(train_loader)
         train_logs['loss'] = train_logs.pop(loss_func.__name__)
