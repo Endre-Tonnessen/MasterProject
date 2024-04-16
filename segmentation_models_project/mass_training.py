@@ -50,7 +50,8 @@ CHANNELS_IN_IMAGE = 1
 
 #TODO: Implement Focal loss, use kaggle steel competition version
 
-models = [smp.PSPNet, smp.PAN, smp.FPN, smp.Linknet, smp.MAnet, smp.Unet]
+models = [smp.UnetPlusPlus]
+# models = [smp.PSPNet, smp.PAN, smp.FPN, smp.Linknet, smp.MAnet, smp.Unet]
 # models = [smp.Unet, smp.UnetPlusPlus, smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet]
 ENCODERS = ['resnet34']#, 'resnet101', 'vgg16', 'mit_b1']
 # ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
@@ -81,7 +82,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     if potential_file.exists():
         print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}. Skipping \n")
         continue
-    
+    # model.load_state_dict()
     # Use same preprocessing method as the encodes trained dataset
     preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 
@@ -104,8 +105,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=8, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=0, drop_last=True)
 
     # for i in range(3):
     #     image, mask = train_dataset[i]
@@ -121,9 +122,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     ]
 
     optimizer = torch.optim.Adam([ 
-        dict(params=model.parameters(), lr=0.0005),
+        dict(params=model.parameters(), lr=),
     ])
-    schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.9, mode="min", patience=3, verbose=True)
+    schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.6, mode="min", patience=2, verbose=True)
 
 
     # create epoch runners 
