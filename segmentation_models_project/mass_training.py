@@ -122,7 +122,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     ]
 
     optimizer = torch.optim.Adam([ 
-        dict(params=model.parameters(), lr=),
+        dict(params=model.parameters(), lr=0.0001),
     ])
     schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.6, mode="min", patience=2, verbose=True)
 
