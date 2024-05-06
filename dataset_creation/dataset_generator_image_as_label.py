@@ -20,6 +20,8 @@ from helper_functions import frame_gen as fg
 from helper_functions.frame_gen import startVM, vmManager
 # import dataset_creation.helper_functions.frame_gen as fg
 from multiprocessing import Process, Queue
+from scipy.ndimage import filters
+from dataclasses import dataclass
 
 import pathlib
 import platform
@@ -34,8 +36,17 @@ def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys
     xs, ys = get_coords(granule_fourier, get_relative=True)
     xs = np.append(xs,xs[0])
     ys = np.append(ys,ys[0])
-    base_image_fig = px.imshow(granule_cutout_image)
-    fig.add_trace(base_image_fig.data[0], 1, 1)                
+    ### base_image_fig = px.imshow(granule_cutout_image)
+    ### fig.add_trace(base_image_fig.data[0], 1, 1)         
+    fig.add_trace(go.Heatmap(z=granule_cutout_image, colorscale='viridis'), row=1, col=1)
+    x_centre = granule_fourier['x'].iloc[0]
+    y_centre = granule_fourier['y'].iloc[0]
+    bbox_left2 = granule_fourier['bbox_left'].iloc[0]
+    bbox_bottom2 = granule_fourier['bbox_bottom'].iloc[0]
+    x_pos_relative = x_centre - bbox_left2
+    y_pos_relative = y_centre - bbox_bottom2
+    fig.add_trace(go.Scatter(x=[y_pos_relative], y=[x_pos_relative], marker=dict(color='red', size=16), name=f"Centre"), row=1, col=1)
+
     # Calculate and draw boundry for first plot
     xs_pixels, ys_pixels = pixels_between_points(xs, ys)
     fig.add_trace(go.Scatter(x=xs, y=ys, marker=dict(color='red', size=16), name=f"400 p border {valid_granule_id}"), row=1, col=1)
@@ -43,8 +54,8 @@ def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys
 
 
     xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
-    fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=2)
-    fig.add_trace(go.Scatter(x=xs_upscaled, y=ys_upscaled, marker=dict(color='red', size=16), name=f"400p upscaled border3 {valid_granule_id}"), row=1, col=2)
+    # fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=2)
+    # fig.add_trace(go.Scatter(x=xs_upscaled, y=ys_upscaled, marker=dict(color='red', size=16), name=f"400p upscaled border3 {valid_granule_id}"), row=1, col=2)
     
     # -----------------------------
     border_image = np.zeros((1024,1024))
@@ -58,21 +69,28 @@ def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys
     for i in range(len(xs_pixels)):
         border_image[ys_pixels[i], xs_pixels[i]] = 60000
 
-    base_image_fig = px.imshow(border_image)
-    fig.add_trace(base_image_fig.data[0], 1, 3)    
+    ### base_image_fig = px.imshow(border_image) 
+    ### fig.add_trace(base_image_fig.data[0], 1, 3)
+     
+    # im_smoothed = ski.filters.gaussian(granule_cutout_image, 1.5)
+    # fig.add_trace(go.Heatmap(z=im_smoothed, colorscale='viridis'), row=1, col=3)
+    fig.add_trace(go.Heatmap(z=border_image, colorscale='viridis'), row=1, col=3)
     fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=2)
     # -----------------------------
 
-    upscaled_image[border_image == 60000] = 60000
-    upscaled_image_fig = px.imshow(upscaled_image)
-    fig.add_trace(upscaled_image_fig.data[0], 1, 2)
+    # upscaled_image[border_image == 60000] = 60000
+    # upscaled_image_fig = px.imshow(upscaled_image)
+    ### fig.add_trace(upscaled_image_fig.data[0], 1, 2)
+    fig.add_trace(go.Heatmap(z=upscaled_image, colorscale='viridis'), row=1, col=2)
 
 
 
-    fig.update_layout(title_text=f"Granule {valid_granule_id}", title_x=0.5, showlegend=False, font_size=11)
+    im_path = granule_fourier['im_path'].iloc[0]
+    im_path = Path(im_path).stem
+    fig.update_layout(title_text=f"{im_path} Granule {valid_granule_id}", title_x=0.5, showlegend=False, font_size=11)
     fig.update_yaxes(autorange='reversed') # Ensure granules are not flipped. Plotly has strange axis direction defaults...
     fig.show()
-
+    
 
 
 startVM()
@@ -86,6 +104,7 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
     project_dir = current_file.parents[1] / "dataset_creation/data/"
 
     image_files = [file[:-4] for file in os.listdir(f"{project_dir}\ALL_IMS")]
+    image_files= ['2020-02-05_14.35.36--NAs--T1354-GFP_Burst']
 
     # processes: list[Process] = []
     image_files_queue = Queue() 
@@ -166,9 +185,26 @@ def label_and_image_YOLOv8(project_dir, filename):
             cutout_height, cutout_width = abs(bbox_left-bbox_right), abs(bbox_bottom - bbox_top)
             upscaled_image, xs_upscaled, ys_upscaled = scale_padding(original_image, (cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
             # upscaled_image, xs_upscaled, ys_upscaled = scale_padding((cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
+            
+            # ------------------- Create directional gradients -------------------
+            crop_width, crop_height = granule_cutout_image.shape
+            pr = _BoundaryExtractionGradient()
+            x_centre = granule_fourier['x'].iloc[0]
+            y_centre = granule_fourier['y'].iloc[0]
+            x_pos_relative = x_centre - bbox_left
+            y_pos_relative = y_centre - bbox_bottom 
+            gradient_image = pr.process_image(granule_cutout_image, (x_pos_relative, y_pos_relative)) # Needs the relative centre
+            upscaled_gradient_image, _, _ = scale_padding(Image.fromarray(gradient_image), (cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 1024, NEW_MAX_WIDTH = 1024)
 
             xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
             assert len(xs_pixels) == len(ys_pixels), f"They should have equal length {len(xs_pixels)} == {len(ys_pixels)}"
+
+            im_path = granule_fourier['im_path'].iloc[0]
+            im_path = Path(im_path).stem
+            # if im_path == "2020-02-05_14.35.36--NAs--T1354-GFP_Burst":
+            plot(granule_cutout_image, upscaled_gradient_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
+            if valid_granule_id == 3: # 2 is also good for testing
+                exit()
 
             # ------------------- Save label to .txt ------------------- 
             assert not granule_fourier.empty, "No fourier terms for valid granule. This should not be possible."
@@ -184,8 +220,13 @@ def label_and_image_YOLOv8(project_dir, filename):
             # ------------------- Save granule_cutout to .png ------------------- 
             # plt.imsave(f"datasets/cutout_with_padding/all_data/images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png.png", upscaled_image)
             assert upscaled_image.shape == (1024,1024), f"Wrong shape, was {upscaled_image.shape} should be (1024,1024)"
-            cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
-            # cv2.imwrite(f"datasets/cutout_with_padding/all_data/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+            # THIS ONE FOR ACTUAL GRANULE IMAGE
+            # cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+            # THIS ONE FOR GRADIENT IMAGE
+            cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit_gradient/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}_gradient.png", upscaled_gradient_image)
+            ### cv2.imwrite(f"datasets/cutout_with_padding/all_data/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+            
+            
             # ------------------- Save label as image (.png) ------------------- 
             # border_image = np.zeros((1024,1024))
             # for i in range(len(xs_pixels)):
@@ -293,12 +334,12 @@ def scale_padding(original_image, img_dims: tuple[int,int], granule_fourier: pd.
     new_im = ImageOps.expand(upscaled_image, padding)
     # ------------------- Get pixel border -------------------
     xs, ys = get_coords(granule_fourier, get_relative=True)
-    xs = np.append(xs,xs[0]) # Add connection from last element to start element
+    xs = np.append(xs,xs[0]) # Add connection from last element to start element # TODO: Error is in here somewhere. Image upscaling is correct, problem with border? Titlted?
     ys = np.append(ys,ys[0])
     # --- Scale border points ---
     xs_upscaled = xs * scale_factor + scale_factor / 2 - 1/2 
     ys_upscaled = ys * scale_factor + scale_factor / 2 - 1/2
-    # --- Scale border points ---
+    # --- Add padding to border points ---
     xs_upscaled += delta_w // 2
     ys_upscaled += delta_h // 2
     upscaled_width, upscaled_height = new_im.size
@@ -319,3 +360,178 @@ if __name__ == "__main__":
 
     main()
 
+
+# ------------------ Gradients of image -------------------------
+@dataclass
+class Kernels:
+    """ Implemenation of two seperable kernels that represent a gradient estimations. """
+
+    xx: np.ndarray
+    xy: np.ndarray
+    yx: np.ndarray
+    yy: np.ndarray
+    label: str
+
+    def gradient_x(self, image):
+        """ Apply the x kernels to get the gradient in the x direction. """
+        return apply_seperable_kernel(image, self.xx, self.xy)
+
+    def gradient_y(self, image):
+        """ Apply the y kernels to get the gradient in the x direction. """
+        return apply_seperable_kernel(image, self.yx, self.yy)
+    
+def apply_seperable_kernel(image, v_1, v_2):
+    """ Apply a separable kernel G to an image where K = v_2 * v_1.
+
+    Namely, v_1 is applied to the image first. """
+    output = np.zeros_like(image)
+    filter_kwargs = dict(mode="reflect", cval=0, origin=0)
+
+    filters.correlate1d(image, v_1, 1, output, **filter_kwargs)
+    filters.correlate1d(output, v_2, 0, output, **filter_kwargs)
+    return output
+
+fourth_order = Kernels(
+    np.array([1, -8, 0, 8, -1]) / 12.0,
+    [1],
+    [1],
+    np.array([1, -8, 0, 8, -1]) / 12.0,
+    "Central fourth order",
+)
+
+# ------------------------------------------------------------
+
+class _BoundaryExtractionGradient():
+    """ Extract the boundary of granule using a directional gradient.
+        this is for granule which appear as a solid blob in the microscope.
+
+    Input parameters
+    ----------
+
+    granule: Granule
+        Extract the boundary from this granule.
+
+
+    Methods
+    -------
+
+    process_image
+        calculate directional gradients for each pixel
+
+    """
+    def process_image(self, image, local_centre):
+        """ Create a directional gradient of the image.
+
+        This calculates the component of the gradient along the radial vector of
+        the granule.
+
+        This is much more resistant to other granules in the local area.
+        Further, the maximum of the gradient is much more reliable than some
+        arbitrary threshold value; while the sobel is useful for this, the use of
+        an absolute value of the gradient caused problems.
+        """
+
+        x_grad, y_grad = self.calculate_gradient(image)
+        x_rad, y_rad = self.get_angle_from_centre(image, local_centre)
+
+        self.processed_image = x_grad * x_rad + y_grad * y_rad
+        return self.processed_image
+
+    def get_angle_from_centre(self, image, local_centre):
+        """Return a normalised vector field of the angle from the local centre of the
+        granule.
+        """
+        crop_width, crop_height = image.shape
+        # Get a vector with the distance from the centre in the x and y directions
+        yDist = np.arange(crop_width) -  local_centre[1]
+        xDist = np.arange(crop_height) - local_centre[0]
+
+        # Turn this into a field
+        xx, yy = np.meshgrid(xDist, yDist)
+
+        # Normalise to unit vectors
+        mag = -np.sqrt(xx ** 2 + yy ** 2)
+
+        return xx / mag, yy / mag
+
+    def calculate_gradient(self, image: np.ndarray):
+        """ Calculate the gradient field of the image.
+
+        Parameters
+        ----------
+        image:np.ndarray
+            The image to use, if none is provided then use the raw image of the
+            granule.
+
+        Returns
+        -------
+        np.ndarray:
+            A XxYx2 array with the gradient field of the granule, the top most slice
+            is in the x direction and the second the y direction.
+
+        """
+        im_smoothed = ski.filters.gaussian(image, 1.5)
+
+        kern = fourth_order
+
+        x_grad = kern.gradient_x(im_smoothed)
+        y_grad = kern.gradient_y(im_smoothed)
+        return x_grad, y_grad
+
+# def process_image(image, crop_width, crop_height, local_centre):
+#     """ Create a directional gradient of the image.
+
+#     This calculates the component of the gradient along the radial vector of
+#     the granule.
+
+#     This is much more resistant to other granules in the local area.
+#     Further, the maximum of the gradient is much more reliable than some
+#     arbitrary threshold value; while the sobel is useful for this, the use of
+#     an absolute value of the gradient caused problems.
+#     """
+
+#     im_smoothed = ski.filters.gaussian(image, 1.5)
+
+#     x_grad, y_grad = calculate_gradient(im_smoothed)
+#     x_rad, y_rad = get_angle_from_centre(crop_width, crop_height, local_centre)
+
+#     processed_image = x_grad * x_rad + y_grad * y_rad
+#     return processed_image
+
+# def get_angle_from_centre(crop_width, crop_height, local_centre):
+#     """Return a normalised vector field of the angle from the local centre of the
+#     granule.
+#     """
+#     # Get a vector with the distance from the centre in the x and y directions
+#     yDist = np.arange(crop_width) -  local_centre[1]
+#     xDist = np.arange(crop_height) - local_centre[0]
+
+#     # Turn this into a field
+#     xx, yy = np.meshgrid(xDist, yDist)
+
+#     # Normalise to unit vectors
+#     mag = -np.sqrt(xx ** 2 + yy ** 2)
+
+#     return xx / mag, yy / mag
+
+# def calculate_gradient(image):
+#     """ Calculate the gradient field of the image.
+
+#     Parameters
+#     ----------
+#     image:np.ndarray
+#         The image to use, if none is provided then use the raw image of the
+#         granule.
+
+#     Returns
+#     -------
+#     np.ndarray:
+#         A XxYx2 array with the gradient field of the granule, the top most slice
+#         is in the x direction and the second the y direction.
+
+#     """
+#     kern = fourth_order
+
+#     x_grad = kern.gradient_x(image)
+#     y_grad = kern.gradient_y(image)
+#     return x_grad, y_grad
