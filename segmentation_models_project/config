@@ -1,0 +1,9 @@
+Host eto033@login.uib.no
+  HostName eto033@login.uib.no
+  User eto033
+
+Host birget
+HostName birget
+ProxyJump eto033@login.uib.no
+ForwardAgent yes
+User eto033
