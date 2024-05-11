@@ -8,3 +8,5 @@ granule_pngs/*
 datasets
 datasets/*
 *.csv
+images
+images/*
