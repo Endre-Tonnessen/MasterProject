@@ -91,8 +91,8 @@ def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys
     fig.show()
     
 
-def plot_single(granule_cutout_image, valid_granule_id, granule_fourier: pd.DataFrame):
-    xs, ys = get_coords(granule_fourier, get_relative=False)
+def plot_single(full_frame, granule_cutout_image, valid_granule_id, granule_fourier: pd.DataFrame):
+    xs, ys = get_coords(granule_fourier, get_relative=True)
     xs = np.append(xs,xs[0])
     ys = np.append(ys,ys[0]) 
     # ------ Centre of granule ------
@@ -113,6 +113,116 @@ def plot_single(granule_cutout_image, valid_granule_id, granule_fourier: pd.Data
     width=1100,
     height=1100,)
     fig.show()
+    # For saving pure image
+    # plt.imsave(f"D:/Master/MasterProject/Overleaf_figures/Chapter4/Full_frames/Granule_{np.random.randint(0,1000)}_raw.png", granule_cutout_image)
+
+    # ------------- Figure for showing the courseness of pixels in granule cutout. Limited information to segment -----------
+    # xs_pixels, ys_pixels = pixels_between_points(xs, ys)
+    # border_image = np.zeros(granule_cutout_image.shape)
+    # for i in range(len(xs_pixels)):
+    #     border_image[ys_pixels[i], xs_pixels[i]] = 1
+
+    # fig = make_subplots(rows=1, cols=2, 
+    #                 horizontal_spacing=0.05, 
+    #                 vertical_spacing=0.1,)
+    # # --- Col 1 --- 
+    # fig.add_trace(go.Heatmap(z=granule_cutout_image, colorscale='viridis'), row=1, col=1)
+    # fig.add_trace(go.Scatter(x=xs, y=ys, marker=dict(color='black', size=40), name=f"400 p border {valid_granule_id}"), row=1, col=1 )
+    # # fig.add_trace(go.Scatter(x=[y_pos_relative], y=[x_pos_relative], marker=dict(color='red', size=16), name=f"Centre"), row=1, col=1)
+    # # --- Col 2 --- 
+    # fig.add_trace(go.Heatmap(z=border_image, colorscale='viridis'), row=1, col=2)
+    # fig.add_trace(go.Scatter(x=xs, y=ys, marker=dict(color='black', size=40), name=f"400 p border {valid_granule_id}"), row=1, col=2)
+    # # --- Layout ---
+    # fig.update_layout(showlegend=False, font_size=25)
+    # fig.update_layout(
+    #     autosize=False,
+    #     width=1700,
+    #     height=1000,
+    # )
+    # # fig.update_coloraxes(showscale=False) 
+    # fig.update_traces(dict(showscale=False, coloraxis=None,), selector={'type':'heatmap'})
+    # fig.write_image(file="D:/Master/MasterProject/Overleaf_figures/Chapter4/StressGranule_and_CourseBorder.svg", scale=4)
+    # fig.show()
+    # ----- The same but for only the single border - StressGranule_and_CourseBorder_1000.svg. THIS PRODUCES BOTH THE BORDER IMAGE AND AN ADDIONAL ZOOM IN VERSION OF THE BORDER
+    # for scale in [1,3,5,10]:
+    #     cutout_width, cutout_height = granule_cutout_image.shape
+    #     original_image = Image.fromarray(granule_cutout_image)
+    #     granule_cutout_image_upscaled, xs, ys = scale_padding(original_image, (cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 100*scale, NEW_MAX_WIDTH = 100*scale)
+        
+    #     xs_pixels, ys_pixels = pixels_between_points(xs, ys)
+    #     border_image = np.zeros(granule_cutout_image_upscaled.shape)
+    #     for i in range(len(xs_pixels)):
+    #         border_image[ys_pixels[i], xs_pixels[i]] = 1
+    #     fig = go.Figure()
+    #     # --- Col 1 --- 
+    #     # fig.add_trace(go.Heatmap(z=granule_cutout_image_upscaled, colorscale='viridis'))
+    #     fig.add_trace(go.Scatter(x=xs, y=ys, mode = "markers", marker=dict(color='black', size=5), name=f"400 p border {valid_granule_id}") )
+    #     # fig.add_trace(go.Scatter(x=[y_pos_relative], y=[x_pos_relative], marker=dict(color='red', size=16), name=f"Centre"),)
+    #     # --- Col 2 --- 
+    #     fig.add_trace(go.Heatmap(z=border_image, colorscale='viridis'))
+    #     # --- Layout ---
+    #     fig.update_layout(showlegend=False, font_size=25)
+    #     fig.update_layout(
+    #         autosize=False,
+    #         width=1500,
+    #         height=1000,
+    #     )
+    #     fig.update_layout(
+    #             {
+    #                 "paper_bgcolor": "rgba(0, 0, 0, 0)",
+    #                 "plot_bgcolor": "rgba(0, 0, 0, 0)",
+    #             }
+    #         )
+    #     max_scale_height = int(np.floor(100*scale / cutout_height))
+    #     max_scale_width  = int(np.floor(100*scale / cutout_width))
+    #     scale_factor = min(max_scale_height, max_scale_width) 
+    #     fig.update_layout(title_text=f"Upscaled {int(scale_factor)} times", title_x=0.5, showlegend=False, font_size=20)
+    #     fig.update_layout(showlegend=False, font_size=20)
+    #     fig.update_traces(dict(showscale=False, coloraxis=None,), selector={'type':'heatmap'})
+    #     fig.write_image(file=f"D:/Master/MasterProject/Overleaf_figures/Chapter4/StressGranule_and_CourseBorder_scales/StressGranule_and_CourseBorder_{100*scale}.svg", scale=4)
+    #     fig.show()
+    #     # --- Zoom in ---
+    #     if scale == 1:
+    #         yrange=[53, 63]
+    #         xrange=[23, 29]
+    #     elif scale == 5:
+    #         yrange=[262, 306]
+    #         xrange=[80, 101]
+    #     elif scale == 10:
+    #         yrange=[513, 715]
+    #         xrange=[146, 250]
+    #     layout = go.Layout(
+    #         yaxis=dict(
+    #             range=yrange
+    #         ),
+    #         xaxis=dict(
+    #             range=xrange
+    #         )
+    #     )
+    #     fig = go.Figure(layout=layout)   
+    #     fig.add_trace(go.Scatter(x=xs, y=ys, mode="markers", marker=dict(color='black', size=15), name=f"400 p border {valid_granule_id}") )
+    #     # fig.add_trace(go.Scatter(x=[y_pos_relative], y=[x_pos_relative], marker=dict(color='red', size=16), name=f"Centre"),)
+    #     # --- Col 2 --- 
+    #     fig.add_trace(go.Heatmap(z=border_image, colorscale='viridis'))
+    #     # --- Layout ---
+    #     fig.update_layout(showlegend=False, font_size=30)
+    #     fig.update_layout(
+    #         autosize=False,
+    #         width=1500,
+    #         height=1000,
+    #     )
+    #     fig.update_layout(
+    #             {
+    #                 "paper_bgcolor": "rgba(0, 0, 0, 0)",
+    #                 "plot_bgcolor": "rgba(0, 0, 0, 0)",
+    #             }
+    #         )
+    #     fig.update_traces(dict(showscale=False, coloraxis=None,), selector={'type':'heatmap'})
+    #     # fig.update_layout(title_text=f"Upscaled {int(scale_factor)} times", title_x=0.5, showlegend=False, font_size=20)
+    #     fig.write_image(file=f"D:/Master/MasterProject/Overleaf_figures/Chapter4/StressGranule_and_CourseBorder_scales/StressGranule_and_CourseBorder_{100*scale}_ZOOM.svg", scale=4)
+
+
+
 
 startVM()
 
@@ -126,6 +236,8 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
 
     image_files = [file[:-4] for file in os.listdir(f"{project_dir}\ALL_IMS")]
     image_files= ['2020-02-05_14.35.36--NAs--T1354-GFP_Burst']
+    # image_files= image_files[:6]
+    # image_files= ['2020-02-05_14.36.40--NAs--T1354-GFP_Burst']
 
     # processes: list[Process] = []
     image_files_queue = Queue() 
@@ -175,7 +287,12 @@ def label_and_image_YOLOv8(project_dir, filename):
     image_analysed_results_df = pd.read_hdf(Path(str(project_dir) +"/"+ f"ALL_FOURIER_h5/{filename}.h5"), mode="r", key="fourier")
 
     data_analysis_to_save = {
-        
+        "filename":[],	
+        "frame":[],	
+        "granule_id":[],
+        "width":[],
+        "height":[],	
+        "filename_full":[]
     }
 
     process_bar = tqdm.tqdm(enumerate(image_gen))
@@ -206,8 +323,9 @@ def label_and_image_YOLOv8(project_dir, filename):
             bbox_bottom = granule_fourier['bbox_bottom'].iloc[0]
             granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
 
-            plot_single(image_data, valid_granule_id, granule_fourier)
-            if valid_granule_id == 3: # 2 is also good for testing
+            # if valid_granule_id == 1: #use 3,  2 is also good for testing
+            if valid_granule_id == 3: #use 3,  2 is also good for testing
+                plot_single(image_data, granule_cutout_image, valid_granule_id, granule_fourier)
                 exit()
             # ------------------- Scaling the granule cutout ------------------- 
             original_image = Image.fromarray(granule_cutout_image)
@@ -229,8 +347,8 @@ def label_and_image_YOLOv8(project_dir, filename):
             xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
             assert len(xs_pixels) == len(ys_pixels), f"They should have equal length {len(xs_pixels)} == {len(ys_pixels)}"
 
-            im_path = granule_fourier['im_path'].iloc[0]
-            im_path = Path(im_path).stem
+            # im_path = granule_fourier['im_path'].iloc[0]
+            # im_path = Path(im_path).stem
             # if im_path == "2020-02-05_14.35.36--NAs--T1354-GFP_Burst":
             # plot(granule_cutout_image, upscaled_gradient_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
             # if valid_granule_id == 3: # 2 is also good for testing
@@ -257,10 +375,10 @@ def label_and_image_YOLOv8(project_dir, filename):
             ### cv2.imwrite(f"datasets/cutout_with_padding/all_data/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
             
             # ----------------- Save 2-channel image of granule and gradient -------------
-            image = np.expand_dims(upscaled_image, axis=-1)
-            gradient = np.expand_dims(upscaled_gradient_image, axis=-1)
-            upscaled_2channel_image = np.concatenate((image,gradient), axis=2)
-            np.save(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit_2channel/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}_gradient", upscaled_2channel_image)
+            # image = np.expand_dims(upscaled_image, axis=-1)
+            # gradient = np.expand_dims(upscaled_gradient_image, axis=-1)
+            # upscaled_2channel_image = np.concatenate((image,gradient), axis=2)
+            # np.save(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit_2channel/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}_gradient", upscaled_2channel_image)
             
             # ------------------- Save label as image (.png) ------------------- 
             border_image = np.zeros((1024,1024))
@@ -269,13 +387,25 @@ def label_and_image_YOLOv8(project_dir, filename):
             flood_fill = ski.morphology.flood(border_image, (512,512), connectivity=1)
             border_image[flood_fill == True] = 1
             ## plt.imsave(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image)
-            cv2.imwrite(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image) # TODO: Uncomment this
+            # THIS ONE FOR ACTUAL LABEL IMAGE
+            cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image) # TODO: Uncomment this
             # Might speed up saving: https://stackoverflow.com/questions/58231354/slow-matplotlib-savefig-to-png
+
+            # Save info
+            data_analysis_to_save["filename"].append(filename)
+            data_analysis_to_save["frame"].append(frame_num)
+            data_analysis_to_save["granule_id"].append(valid_granule_id)
+            data_analysis_to_save["width"].append(bbox_right-bbox_left )
+            data_analysis_to_save["height"].append(bbox_top-bbox_bottom)
+            data_analysis_to_save["filename_full"].append(f"{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png")
 
             # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
             # return
             # if frame_id == 1:
             #     return
+        break
+    # data_analysis_to_save = pd.DataFrame(data_analysis_to_save)
+    # data_analysis_to_save.to_csv(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_saved_analysis_data/{filename}.csv", index_label=False)
         
     # Clean up
     del image_analysed_results_df
