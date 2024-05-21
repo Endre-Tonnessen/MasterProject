@@ -16,8 +16,9 @@ import cv2
 import matplotlib.pyplot as plt
 import gc         # garbage collect library
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from dataset import Dataset, get_preprocessing
+from dataset import Dataset #get_preprocessing
 from plots import visualize, create_log_dict, log_training
+import plotly.graph_objects as go
 import time
 from datetime import timedelta
 torch.cuda.is_available()
@@ -34,8 +35,9 @@ Path("./MODELS").mkdir(parents=True, exist_ok=True)
 Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True)
 
 # -------- Dataset --------
-DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
-# DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_medium"
+# DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
+# DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient"
+DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/normal/"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
 
@@ -46,11 +48,14 @@ x_test_dir = os.path.join(DATA_DIR, 'test/images')
 y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 
 
-CHANNELS_IN_IMAGE = 1
+CHANNELS_IN_IMAGE = 2
+gradient_dir_optional = "None"
+if CHANNELS_IN_IMAGE == 2:
+    gradient_dir_optional = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient/"
 
 #TODO: Implement Focal loss, use kaggle steel competition version
 
-models = [smp.UnetPlusPlus]
+models = [smp.Unet]
 # models = [smp.PSPNet, smp.PAN, smp.FPN, smp.Linknet, smp.MAnet, smp.Unet]
 # models = [smp.Unet, smp.UnetPlusPlus, smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet]
 ENCODERS = ['resnet34']#, 'resnet101', 'vgg16', 'mit_b1']
@@ -59,7 +64,7 @@ loss_functions = [JaccardLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
 freeze = [False] # True
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
-    torch.cuda.reset_peak_memory_stats()
+    # torch.cuda.reset_peak_memory_stats()
 
     architecture, ENCODER, loss_func, freeze_encoder = data
     print("\n ------------------------")
@@ -84,37 +89,39 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         continue
     # model.load_state_dict()
     # Use same preprocessing method as the encodes trained dataset
-    preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
+    # preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 
     train_dataset = Dataset(
         x_train_dir, #x_test_dir, #x_train_dir, 
         y_train_dir, #y_test_dir, #y_train_dir, 
-        preprocessing=get_preprocessing(preprocessing_fn, CHANNELS_IN_IMAGE=CHANNELS_IN_IMAGE),
         classes=CLASSES,
-        CHANNELS_IN_IMAGE=1
+        CHANNELS_IN_IMAGE=CHANNELS_IN_IMAGE,
+        gradient_dir_optional=os.path.join(gradient_dir_optional, 'train/images')
     )
 
     valid_dataset = Dataset(
         x_valid_dir, 
         y_valid_dir, 
-        preprocessing=get_preprocessing(preprocessing_fn, CHANNELS_IN_IMAGE=CHANNELS_IN_IMAGE),
         classes=CLASSES,
-        CHANNELS_IN_IMAGE=1
+        CHANNELS_IN_IMAGE=CHANNELS_IN_IMAGE,
+        gradient_dir_optional=os.path.join(gradient_dir_optional, 'val/images')
     )
     if CHANNELS_IN_IMAGE == 1:
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=4, shuffle=False, num_workers=0, drop_last=True)
 
-    # for i in range(3):
-    #     image, mask = train_dataset[i]
-    #     # print(image.shape)
-    #     visualize(image=image, mask=mask.squeeze(-1))
-        # image = image.transpose(1, 2, 0).astype('float32')
-        # visualize(image=image, mask=mask[0])
-
+    # fig = go.Figure()
+    # fig.add_trace(go.Heatmap(z=valid_dataset[0][1].squeeze(), colorscale='Inferno'))
+    # fig.update_layout(width=1200, height=1000, showlegend=False, font_size=20)
+    # fig.show()
+    # fig = go.Figure()
+    # fig.add_trace(go.Heatmap(z=valid_dataset[0][0].squeeze(), colorscale='Inferno'))
+    # fig.update_layout(width=1200, height=1000, showlegend=False, font_size=20)
+    # fig.show()
+    # exit()
     metrics = [
         IoU(),
         Accuracy(),
@@ -124,7 +131,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     optimizer = torch.optim.Adam([ 
         dict(params=model.parameters(), lr=0.0001),
     ])
-    schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.6, mode="min", patience=2, verbose=True)
+    schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.6, mode="min", patience=1, verbose=True)
 
 
     # create epoch runners 
@@ -202,9 +209,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     df['parameters'] = seg_head_total_params+encoder_total_params+decoder_total_params
     # Calc amount of memory used
     # df['memory_used'] = torch.cuda.max_memory_allocated()
-    df['memory_used'] = torch.cuda.max_memory_reserved()
-    # torch.cuda.reset_max_memory_allocated()
-    torch.cuda.reset_peak_memory_stats()
+    # df['memory_used'] = torch.cuda.max_memory_reserved()
+    ## torch.cuda.reset_max_memory_allocated()
+    # torch.cuda.reset_peak_memory_stats()
     # Add if encoder was freezed during training
     df['freeze_encoder'] = freeze_encoder
     # Add estimated inference time
@@ -224,9 +231,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     del seg_head_total_params
     del schedular
 
-    gc.collect()
-    with torch.cuda.device(selected_device):
-        torch.cuda.empty_cache() 
+    # gc.collect()
+    # with torch.cuda.device(selected_device):
+    #     torch.cuda.empty_cache() 
 
 # # ---------------- TESTING ----------------
 

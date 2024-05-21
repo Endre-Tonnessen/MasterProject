@@ -2,4 +2,5 @@ MODELS
 MODELS/*
 best_model.pth
 oldte.csv
-
+TRAINING_RESULTS/old
+TRAINING_RESULTS/old/*
