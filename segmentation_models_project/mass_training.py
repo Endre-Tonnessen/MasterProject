@@ -32,13 +32,13 @@ if selected_device == "cpu":
 
 # Create folder structure
 Path("./MODELS").mkdir(parents=True, exist_ok=True)
-Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True)
+Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True) # tmux -> ctrl+s to see all sessions, -> ctrl+b d to detach from session
 
 # -------- Dataset --------
 # DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
 # DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient"
-dataset_feature = "gradient"
-DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient/"
+dataset_feature = "two_channel"
+DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/normal/"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
 
@@ -49,20 +49,20 @@ x_test_dir = os.path.join(DATA_DIR, 'test/images')
 y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 
 CONTINOUE_FROM_LAST = True
-CHANNELS_IN_IMAGE = 1
+CHANNELS_IN_IMAGE = 2
 gradient_dir_optional = "None"
 if CHANNELS_IN_IMAGE == 2:
     gradient_dir_optional = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient/"
 
 #TODO: Implement Focal loss, use kaggle steel competition version
 
-models = [smp.Unet]
+models = [smp.DeepLabV3Plus, smp.MAnet, smp.PSPNet, smp.FPN, smp.PAN, smp.Linknet, smp.UnetPlusPlus] # (PSPNet, Resnet) (smp.MAnet, Resnet) (smp.DeepLabV3Plus, Resnet)
 # models = [smp.PSPNet, smp.PAN, smp.FPN, smp.Linknet, smp.MAnet, smp.Unet]
 # models = [smp.Unet, smp.UnetPlusPlus, smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet]
 ENCODERS = ['resnet34']#, 'resnet101', 'vgg16', 'mit_b1']
 # ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
 loss_functions = [JaccardLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
-freeze = [False] # True
+freeze = [False]#, True] # True 
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.cuda.reset_peak_memory_stats()
