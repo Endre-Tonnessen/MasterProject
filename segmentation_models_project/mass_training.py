@@ -22,7 +22,7 @@ import plotly.graph_objects as go
 import time
 from datetime import timedelta
 torch.cuda.is_available()
-selected_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+selected_device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
 print("TRAINING ON",selected_device)
 
 if selected_device == "cpu":
@@ -37,6 +37,7 @@ Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True)
 # -------- Dataset --------
 # DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
 # DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient"
+dataset_feature = "two_channel"
 DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/normal/"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
@@ -68,7 +69,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
 
     architecture, ENCODER, loss_func, freeze_encoder = data
     print("\n ------------------------")
-    print(f"Now training: {architecture()._get_name()} with {ENCODER} using {loss_func._get_name()} | Encoder freeze: {freeze_encoder}")
+    print(f"Now training: {architecture()._get_name()} with {ENCODER} using {loss_func._get_name()} | Encoder freeze: {freeze_encoder} | Data feature: {dataset_feature}")
 
     ENCODER_WEIGHTS = 'imagenet'
     CLASSES = ['granule']
@@ -83,9 +84,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         in_channels=CHANNELS_IN_IMAGE # For grayscale
     )
     # ----- Skip training if already done -----
-    potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.csv")
+    potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
     if potential_file.exists():
-        print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}. Skipping \n")
+        print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}. Skipping \n")
         continue
     # model.load_state_dict()
     # Use same preprocessing method as the encodes trained dataset
@@ -177,7 +178,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         # do something (save model, change lr, etc.)
         if max_score < valid_logs['iou_score']: 
             max_score = valid_logs['iou_score']
-            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__two_channel.pth")
+            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
             print('Model saved!')
             
         # if i == 7:
@@ -187,7 +188,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.save(model, f"./MODELS/last_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()__Freeze_encoder_{freeze_encoder}}.pth")
 
     # Test inference speed of best model
-    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__two_channel.pth")
+    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
     cycles = 10
     times = []
     for i in range(cycles):
@@ -217,7 +218,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Add estimated inference time
     df['inference_time'] = inference_time
     # Save 
-    df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__two_channel.csv")
+    df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
     
     # Memory handling
     del model
