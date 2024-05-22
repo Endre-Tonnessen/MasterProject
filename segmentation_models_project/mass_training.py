@@ -110,8 +110,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=4, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=6, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=6, shuffle=False, num_workers=0, drop_last=True)
 
     # fig = go.Figure()
     # fig.add_trace(go.Heatmap(z=valid_dataset[0][1].squeeze(), colorscale='Inferno'))
@@ -162,7 +162,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Create logging dict
     df = create_log_dict(metrics, loss_func)
 
-    for i in range(0, 20): # TODO: Implement early stopping
+    for i in range(0, 10): # TODO: Implement early stopping
         
         print(f"\nEpoch: {i} | {model._get_name()}__{ENCODER}__{loss_func._get_name()}")
         # Logging
@@ -177,7 +177,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         # do something (save model, change lr, etc.)
         if max_score < valid_logs['iou_score']: 
             max_score = valid_logs['iou_score']
-            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.pth")
+            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__two_channel.pth")
             print('Model saved!')
             
         # if i == 7:
@@ -187,7 +187,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.save(model, f"./MODELS/last_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()__Freeze_encoder_{freeze_encoder}}.pth")
 
     # Test inference speed of best model
-    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.pth")
+    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__two_channel.pth")
     cycles = 10
     times = []
     for i in range(cycles):
@@ -217,7 +217,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Add estimated inference time
     df['inference_time'] = inference_time
     # Save 
-    df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}.csv")
+    df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__two_channel.csv")
     
     # Memory handling
     del model
