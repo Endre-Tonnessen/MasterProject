@@ -37,8 +37,8 @@ Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True)
 # -------- Dataset --------
 # DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
 # DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient"
-dataset_feature = "two_channel"
-DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/normal/"
+dataset_feature = "gradient"
+DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient/"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
 
@@ -49,7 +49,7 @@ x_test_dir = os.path.join(DATA_DIR, 'test/images')
 y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 
 CONTINOUE_FROM_LAST = True
-CHANNELS_IN_IMAGE = 2
+CHANNELS_IN_IMAGE = 1
 gradient_dir_optional = "None"
 if CHANNELS_IN_IMAGE == 2:
     gradient_dir_optional = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient/"
@@ -86,9 +86,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # ----- Skip training if already done -----
     potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
     if potential_file.exists():
-        print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}. Skipping \n")
         model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
         if not CONTINOUE_FROM_LAST:
+            print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}. Skipping \n")
             continue
     # model.load_state_dict()
     # Use same preprocessing method as the encodes trained dataset
@@ -165,7 +165,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Create logging dict
     df = create_log_dict(metrics, loss_func)
 
-    for i in range(0, 2): # TODO: Implement early stopping
+    for i in range(0, 20): # TODO: Implement early stopping
         
         print(f"\nEpoch: {i} | {model._get_name()}__{ENCODER}__{loss_func._get_name()}")
         # Logging
