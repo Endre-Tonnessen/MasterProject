@@ -1,3 +1,5 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 import torch
 import numpy as np
 import segmentation_models_pytorch as smp
@@ -9,8 +11,6 @@ from itertools import product
 import pandas as pd
 from pathlib import Path
 from segmentation_models_pytorch.base import SegmentationModel
-import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -22,7 +22,7 @@ import plotly.graph_objects as go
 import time
 from datetime import timedelta
 torch.cuda.is_available()
-selected_device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
+selected_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("TRAINING ON",selected_device)
 
 if selected_device == "cpu":
@@ -48,7 +48,7 @@ y_valid_dir = os.path.join(DATA_DIR, 'val/labels')
 x_test_dir = os.path.join(DATA_DIR, 'test/images')
 y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 
-
+CONTINOUE_FROM_LAST = True
 CHANNELS_IN_IMAGE = 2
 gradient_dir_optional = "None"
 if CHANNELS_IN_IMAGE == 2:
@@ -87,7 +87,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
     if potential_file.exists():
         print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}. Skipping \n")
-        continue
+        model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
+        if not CONTINOUE_FROM_LAST:
+            continue
     # model.load_state_dict()
     # Use same preprocessing method as the encodes trained dataset
     # preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
@@ -111,8 +113,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=6, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=6, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=0, drop_last=True)
 
     # fig = go.Figure()
     # fig.add_trace(go.Heatmap(z=valid_dataset[0][1].squeeze(), colorscale='Inferno'))
@@ -163,7 +165,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Create logging dict
     df = create_log_dict(metrics, loss_func)
 
-    for i in range(0, 10): # TODO: Implement early stopping
+    for i in range(0, 2): # TODO: Implement early stopping
         
         print(f"\nEpoch: {i} | {model._get_name()}__{ENCODER}__{loss_func._get_name()}")
         # Logging
@@ -218,7 +220,12 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Add estimated inference time
     df['inference_time'] = inference_time
     # Save 
-    df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
+    if potential_file.exists() and CONTINOUE_FROM_LAST: # Merge
+        exiting_df = pd.read_csv(potential_file, index_col=0)
+        df = pd.concat((exiting_df, df), ignore_index=True)
+        df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
+    else: # Overwrite exiting file
+        df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
     
     # Memory handling
     del model
