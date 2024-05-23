@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 import torch
 import numpy as np
 import segmentation_models_pytorch as smp
@@ -56,13 +56,12 @@ if CHANNELS_IN_IMAGE == 2:
 
 #TODO: Implement Focal loss, use kaggle steel competition version
 
-models = [smp.DeepLabV3Plus, smp.MAnet, smp.PSPNet, smp.FPN, smp.PAN, smp.Linknet, smp.UnetPlusPlus] # (PSPNet, Resnet) (smp.MAnet, Resnet) (smp.DeepLabV3Plus, Resnet)
-# models = [smp.PSPNet, smp.PAN, smp.FPN, smp.Linknet, smp.MAnet, smp.Unet]
-# models = [smp.Unet, smp.UnetPlusPlus, smp.DeepLabV3Plus, smp.FPN, smp.Linknet, smp.MAnet, smp.PAN, smp.PSPNet]
-ENCODERS = ['resnet34']#, 'resnet101', 'vgg16', 'mit_b1']
+# models = [smp.DeepLabV3Plus, smp.MAnet, smp.PSPNet, smp.FPN, smp.PAN, smp.Linknet, smp.UnetPlusPlus] 
+models = [smp.DeepLabV3Plus] 
+ENCODERS = ['xception41', 'xception71', 'resnet101', 'vgg16', 'resnetv2_50', 'efficientnetv2_l']#, 'resnet101', 'vgg16', 'mit_b1']
 # ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
 loss_functions = [JaccardLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
-freeze = [False]#, True] # True 
+freeze = [False, True]#, True] # True 
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.cuda.reset_peak_memory_stats()
@@ -113,8 +112,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=16, shuffle=False, num_workers=0, drop_last=True)
 
     # fig = go.Figure()
     # fig.add_trace(go.Heatmap(z=valid_dataset[0][1].squeeze(), colorscale='Inferno'))
