@@ -1,5 +1,7 @@
+# import huggingface_hub
+# huggingface_hub.accept_access_request
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 import torch
 import numpy as np
 import segmentation_models_pytorch as smp
@@ -58,10 +60,11 @@ if CHANNELS_IN_IMAGE == 2:
 
 # models = [smp.DeepLabV3Plus, smp.MAnet, smp.PSPNet, smp.FPN, smp.PAN, smp.Linknet, smp.UnetPlusPlus] 
 models = [smp.DeepLabV3Plus] 
-ENCODERS = ['xception41', 'xception71', 'resnet101', 'vgg16', 'resnetv2_50', 'efficientnetv2_l']#, 'resnet101', 'vgg16', 'mit_b1']
+ENCODERS = ['timm-efficientnet-b2']#, 'tu-xception41', 'tu-resnetv2_101', 'tu-resnetv2_50', 'resnet101', 'resnet34'] # 'tu-xception71' <- batch 10
 # ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
-loss_functions = [JaccardLoss()]#JaccardLoss(), DiceLoss(), BCELoss()]
-freeze = [False, True]#, True] # True 
+# loss_functions = [DiceLoss(), BCELoss()]#JaccardLoss(), DiceLoss(), BCELoss()] 
+loss_functions = [JaccardLoss()] 
+freeze = [False]#, True] # True 
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.cuda.reset_peak_memory_stats()
@@ -73,7 +76,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     ENCODER_WEIGHTS = 'imagenet'
     CLASSES = ['granule']
     ACTIVATION = 'sigmoid' # could be None for logits or 'softmax2d' for multiclass segmentation
-    DEVICE = 'cuda'
+    DEVICE = selected_device
 
     model: SegmentationModel = architecture(
         encoder_name=ENCODER, # Backbone 
@@ -85,10 +88,11 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # ----- Skip training if already done -----
     potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
     if potential_file.exists():
-        model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
         if not CONTINOUE_FROM_LAST:
             print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}. Skipping \n")
             continue
+        model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
+
     # model.load_state_dict()
     # Use same preprocessing method as the encodes trained dataset
     # preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
@@ -112,8 +116,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=16, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=12, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=12, shuffle=False, num_workers=0, drop_last=True)
 
     # fig = go.Figure()
     # fig.add_trace(go.Heatmap(z=valid_dataset[0][1].squeeze(), colorscale='Inferno'))
@@ -164,7 +168,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Create logging dict
     df = create_log_dict(metrics, loss_func)
 
-    for i in range(0, 20): # TODO: Implement early stopping
+    for i in range(0, 40): # TODO: Implement early stopping
         
         print(f"\nEpoch: {i} | {model._get_name()}__{ENCODER}__{loss_func._get_name()}")
         # Logging
