@@ -5,3 +5,4 @@ oldte.csv
 TRAINING_RESULTS/old
 TRAINING_RESULTS/old/*
 TRAINING_RESULTS
+__pycache__
