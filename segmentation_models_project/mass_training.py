@@ -37,6 +37,7 @@ if selected_device == "cpu":
 # Create folder structure
 Path("./MODELS").mkdir(parents=True, exist_ok=True)
 Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True) # tmux -> ctrl+s to see all sessions, -> ctrl+b d to detach from session
+Path("./TRAINING_RESULTS/temp").mkdir(parents=True, exist_ok=True) 
 
 # -------- Dataset --------
 # DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
@@ -181,6 +182,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         df = log_training(df, train_logs, valid_logs) # Save stats
         # Step learning rate
         schedular.step(valid_logs['loss'])
+        pd.DataFrame(df).to_csv(f"./TRAINING_RESULTS/temp/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
 
         # do something (save model, change lr, etc.)
         if max_score < valid_logs['iou_score']: 
