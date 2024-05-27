@@ -7,7 +7,9 @@ import numpy as np
 import segmentation_models_pytorch as smp
 from segmentation_models_pytorch.utils.metrics import IoU, Accuracy, Fscore
 from segmentation_models_pytorch.utils.train import TrainEpoch, ValidEpoch
-from segmentation_models_pytorch.utils.losses import DiceLoss, BCELoss, BCEWithLogitsLoss, JaccardLoss
+from segmentation_models_pytorch.utils.losses import DiceLoss, BCELoss, JaccardLoss, BCEWithLogitsLoss
+from custom_losses import FocalLoss, BinaryLovaszLoss, BCEJaccardLoss, BCEDiceLoss
+
 from torch.utils.data import DataLoader
 from itertools import product
 import pandas as pd
@@ -62,8 +64,7 @@ if CHANNELS_IN_IMAGE == 2:
 models = [smp.DeepLabV3Plus] 
 ENCODERS = ['timm-efficientnet-b2']#, 'tu-xception41', 'tu-resnetv2_101', 'tu-resnetv2_50', 'resnet101', 'resnet34'] # 'tu-xception71' <- batch 10
 # ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
-# loss_functions = [DiceLoss(), BCELoss()]#JaccardLoss(), DiceLoss(), BCELoss()] 
-loss_functions = [JaccardLoss()] 
+loss_functions = [JaccardLoss(), BinaryLovaszLoss(), BCEJaccardLoss(), BCEDiceLoss(), DiceLoss(), BCELoss(), DiceLoss(), BCELoss()] 
 freeze = [False]#, True] # True 
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
@@ -116,8 +117,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=12, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=12, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=3, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=3, shuffle=False, num_workers=0, drop_last=True)
 
     # fig = go.Figure()
     # fig.add_trace(go.Heatmap(z=valid_dataset[0][1].squeeze(), colorscale='Inferno'))
