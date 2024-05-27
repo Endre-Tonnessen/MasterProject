@@ -1,13 +1,13 @@
 # import huggingface_hub
 # huggingface_hub.accept_access_request
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 import torch
 import numpy as np
 import segmentation_models_pytorch as smp
 from segmentation_models_pytorch.utils.metrics import IoU, Accuracy, Fscore
 from segmentation_models_pytorch.utils.train import TrainEpoch, ValidEpoch
-from segmentation_models_pytorch.utils.losses import DiceLoss, BCELoss, JaccardLoss, BCEWithLogitsLoss
+from segmentation_models_pytorch.utils.losses import DiceLoss, BCELoss, JaccardLoss
 from custom_losses import FocalLoss, BinaryLovaszLoss, BCEJaccardLoss, BCEDiceLoss
 
 from torch.utils.data import DataLoader
@@ -52,7 +52,7 @@ y_valid_dir = os.path.join(DATA_DIR, 'val/labels')
 x_test_dir = os.path.join(DATA_DIR, 'test/images')
 y_test_dir = os.path.join(DATA_DIR, 'test/labels')
 
-CONTINOUE_FROM_LAST = True
+CONTINOUE_FROM_LAST = False
 CHANNELS_IN_IMAGE = 2
 gradient_dir_optional = "None"
 if CHANNELS_IN_IMAGE == 2:
@@ -62,9 +62,10 @@ if CHANNELS_IN_IMAGE == 2:
 
 # models = [smp.DeepLabV3Plus, smp.MAnet, smp.PSPNet, smp.FPN, smp.PAN, smp.Linknet, smp.UnetPlusPlus] 
 models = [smp.DeepLabV3Plus] 
-ENCODERS = ['timm-efficientnet-b2']#, 'tu-xception41', 'tu-resnetv2_101', 'tu-resnetv2_50', 'resnet101', 'resnet34'] # 'tu-xception71' <- batch 10
+ENCODERS = ['timm-efficientnet-b3']#, 'tu-xception41', 'tu-resnetv2_101', 'tu-resnetv2_50', 'resnet101', 'resnet34'] # 'tu-xception71' <- batch 10
 # ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
-loss_functions = [JaccardLoss(), BinaryLovaszLoss(), BCEJaccardLoss(), BCEDiceLoss(), DiceLoss(), BCELoss(), DiceLoss(), BCELoss()] 
+# loss_functions = [BinaryLovaszLoss(), FocalLoss(), BCEJaccardLoss(), BCEDiceLoss(), DiceLoss(), BCELoss(), JaccardLoss()] 
+loss_functions = [JaccardLoss()] 
 freeze = [False]#, True] # True 
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
@@ -117,8 +118,8 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         assert (train_dataset[0][0].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][0].shape[0]}"
         assert (train_dataset[0][1].shape == (1,1024,1024)), f"Data was loaded wrong! Expected {CHANNELS_IN_IMAGE} channels, but got {train_dataset[0][1].shape[0]}"
 
-    train_loader = DataLoader(train_dataset, batch_size=3, shuffle=True, num_workers=0, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=3, shuffle=False, num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=5, shuffle=True, num_workers=0, drop_last=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=5, shuffle=False, num_workers=0, drop_last=True)
 
     # fig = go.Figure()
     # fig.add_trace(go.Heatmap(z=valid_dataset[0][1].squeeze(), colorscale='Inferno'))
@@ -138,7 +139,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     optimizer = torch.optim.Adam([ 
         dict(params=model.parameters(), lr=0.0001),
     ])
-    schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.6, mode="min", patience=1, verbose=True)
+    schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.6, mode="min", patience=1) # TODO: Print lr for each epoch
 
 
     # create epoch runners 
@@ -169,7 +170,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Create logging dict
     df = create_log_dict(metrics, loss_func)
 
-    for i in range(0, 40): # TODO: Implement early stopping
+    for i in range(0, 20): # TODO: Implement early stopping
         
         print(f"\nEpoch: {i} | {model._get_name()}__{ENCODER}__{loss_func._get_name()}")
         # Logging
