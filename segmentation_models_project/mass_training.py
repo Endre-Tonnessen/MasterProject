@@ -1,7 +1,7 @@
 # import huggingface_hub
 # huggingface_hub.accept_access_request
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 import torch
 import numpy as np
 import segmentation_models_pytorch as smp
@@ -67,7 +67,7 @@ ENCODERS = ['timm-efficientnet-b1']#, 'tu-xception41', 'tu-resnetv2_101', 'tu-re
 # ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
 # loss_functions = [BinaryLovaszLoss(), FocalLoss(), BCEJaccardLoss(), BCEDiceLoss(), DiceLoss(), BCELoss(), JaccardLoss()] 
 loss_functions = [JaccardLoss()] 
-freeze = [False]#, True] # True 
+freeze = [True]#, True] # True 
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.cuda.reset_peak_memory_stats()
