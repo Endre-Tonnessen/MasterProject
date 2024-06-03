@@ -5,7 +5,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 import torch
 import numpy as np
 import segmentation_models_pytorch as smp
-from segmentation_models_pytorch.utils.metrics import IoU, Accuracy, Fscore
+from segmentation_models_pytorch.utils.metrics import IoU, Accuracy, Fscore, Precision, Recall 
 from segmentation_models_pytorch.utils.train import TrainEpoch, ValidEpoch
 from segmentation_models_pytorch.utils.losses import DiceLoss, BCELoss, JaccardLoss
 from custom_losses import FocalLoss, BinaryLovaszLoss, BCEJaccardLoss, BCEDiceLoss
@@ -134,7 +134,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     metrics = [
         IoU(),
         Accuracy(),
-        Fscore()
+        Fscore(),
+        Precision(), 
+        Recall() 
     ]
 
     optimizer = torch.optim.Adam([ 
