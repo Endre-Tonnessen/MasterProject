@@ -51,6 +51,10 @@ Need to make a larger dataset for training. Current training set is composed fro
         # From local console, run to grab ALL files in external folder and put it at current cmd location.
         scp kjempefuru:/export/grellscheidfs/microscopy/2020-02-05/* .
 
+        # New files | USE THIS ONE
+            scp kjempefuru:/export/grellscheidfs/microscopy/2019-10-31/2019-10-31_12.18.43--NControlLongB--T1015-Burst.h5 .
+            scp kjempefuru:/export/grellscheidfs/microscopy/2019-10-31/ .
+
 # What should the model predict? - DONE
     -> Currently the model will make a prediction no matter how the granule looks. This can lead to undesirable results, we may not always want to classify every granules? Any we should exclude?
 *No changes needed*
