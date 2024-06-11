@@ -162,7 +162,7 @@ def plot_single(full_frame, granule_cutout_image, valid_granule_id, granule_four
     # fig.write_image(file="D:/Master/MasterProject/Overleaf_figures/Chapter4/StressGranule_and_CourseBorder.svg", scale=4)
     # fig.show()
     # ----- The same but for only the single border - StressGranule_and_CourseBorder_1000.svg. THIS PRODUCES BOTH THE BORDER IMAGE AND AN ADDIONAL ZOOM IN VERSION OF THE BORDER
-    for scale in [1,3,5,10]:
+    for scale in [1,5,10]:
         cutout_width, cutout_height = granule_cutout_image.shape
         original_image = Image.fromarray(granule_cutout_image)
         granule_cutout_image_upscaled, xs, ys = scale_padding(original_image, (cutout_height, cutout_width), granule_fourier, NEW_MAX_HEIGHT = 100*scale, NEW_MAX_WIDTH = 100*scale)
@@ -179,7 +179,7 @@ def plot_single(full_frame, granule_cutout_image, valid_granule_id, granule_four
         # --- Col 2 --- 
         fig.add_trace(go.Heatmap(z=border_image, colorscale='viridis'))
         # --- Layout ---
-        fig.update_layout(showlegend=False, font_size=25)
+        fig.update_layout(showlegend=False, font_size=55)
         fig.update_layout(
             autosize=False,
             width=1500,
@@ -201,7 +201,7 @@ def plot_single(full_frame, granule_cutout_image, valid_granule_id, granule_four
         max_scale_width  = int(np.floor(100*scale / cutout_width))
         scale_factor = min(max_scale_height, max_scale_width) 
         # fig.update_layout(title_text=f"Upscaled {int(scale_factor)} times", title_x=0.5, showlegend=False, font_size=20)
-        fig.update_layout(showlegend=False, font_size=30)
+        fig.update_layout(showlegend=False, font_size=55)
         fig.update_traces(dict(showscale=False, coloraxis=None,), selector={'type':'heatmap'})
         fig.write_image(file=f"D:/Master/MasterProject/Overleaf_figures/Chapter4/StressGranule_and_CourseBorder_scales/StressGranule_and_CourseBorder_{100*scale}.svg", scale=4)
         fig.show()
@@ -229,7 +229,7 @@ def plot_single(full_frame, granule_cutout_image, valid_granule_id, granule_four
         # --- Col 2 --- 
         fig.add_trace(go.Heatmap(z=border_image, colorscale='viridis'))
         # --- Layout ---
-        fig.update_layout(showlegend=False, font_size=40)
+        fig.update_layout(showlegend=False, font_size=55)
         fig.update_layout(
             autosize=False,
             width=1500,
@@ -246,8 +246,8 @@ def plot_single(full_frame, granule_cutout_image, valid_granule_id, granule_four
         )
         fig.update_traces(dict(showscale=False, coloraxis=None,), selector={'type':'heatmap'})
         # fig.update_layout(title_text=f"Upscaled {int(scale_factor)} times", title_x=0.5, showlegend=False, font_size=20)
-        fig.update_yaxes(showticklabels=False)
-        fig.update_xaxes(showticklabels=False)
+        # fig.update_yaxes(showticklabels=False)
+        # fig.update_xaxes(showticklabels=False)
         fig.write_image(file=f"D:/Master/MasterProject/Overleaf_figures/Chapter4/StressGranule_and_CourseBorder_scales/StressGranule_and_CourseBorder_{100*scale}_ZOOM.svg", scale=4)
 
 
