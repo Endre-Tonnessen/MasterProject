@@ -82,3 +82,66 @@ Edge case when line is directly in the middle of pixels. Which ones do we pick?
 Paper: https://arxiv.org/abs/2305.09972
 -> Have a look at feature maps, displaying how the model views the image at different layers.
     -> Can explain class confusion. Ofcourse i only have 1 class currently...
+
+
+
+# Kjempefuru
+
+python ../../granule_explorer_core/workflow/manager.py process-image /export/grellscheidfs/microscopy/2020-02-05/2020-02-05_15.11.08--NAs--T1354-GFP_Burst.ims .
+
+
+# Plots 
+Remove background color, should be white. Rmoemove lines.
+
+Increase label text to be size of thesis text.
+
+Remove titles, Add A and B, 
+
+Figure 4.5, see paper. Remove perspctive thing, remove title, increase fonts size, Add A, B, C ticks.
+
+Font should be black.
+
+Fig 4.7: Make into heatmap, which makes difference between 0 and low amounts of granules more clear. 
+Currently it seems that there are more granules in the edge cases then there actually are. 
+
+
+# Jack
+Finish full draft of chapter 4.
+
+# Pekka
+Vacation: when are you on vacation?
+    -> 28. Juni og hele Juli
+
+Er Juli vurderingsfri?
+Jack has an external supervisor from Germany who is available in July. 
+
+Section 4.2 and section 5. Is the current model evaluation and selection reasonable?
+    -> Yes!
+
+
+# Stanislav
+Send mail asking about the amount of storage space a student has on birget.
+Ask about transfering large amounts of data between kjempefuru and birget. (Need all the .ims files and their corresponding gradient analysis results.)
+
+/export/grellscheidfs/microscopy
+
+## Chapter 5 ML results
+For all training iou plots, add the legend inside the plot. There is usually room for them. Val iou can be as normal.
+https://plotly.com/python/legend/
+
+
+# NREC: https://dashboard.nrec.no/dashboard/project/
+Username: 'endre.tonnessen@student.uib.no'
+Password: 'zwLsfsgGl97QhedC'
+
+
+# Copying files
+
+Sodium Arsinite 2020- the one i have used
+
+2019-10-31 - Arsinite
+
+2019-12-09 - Ctrlomozone
+
+
+[Implement new GE version.]
