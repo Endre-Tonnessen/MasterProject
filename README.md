@@ -93,25 +93,6 @@ Paper: https://arxiv.org/abs/2305.09972
 
 python ../../granule_explorer_core/workflow/manager.py process-image /export/grellscheidfs/microscopy/2020-02-05/2020-02-05_15.11.08--NAs--T1354-GFP_Burst.ims .
 
-
-# Plots 
-Remove background color, should be white. Rmoemove lines.
-
-Increase label text to be size of thesis text.
-
-Remove titles, Add A and B, 
-
-Figure 4.5, see paper. Remove perspctive thing, remove title, increase fonts size, Add A, B, C ticks.
-
-Font should be black.
-
-Fig 4.7: Make into heatmap, which makes difference between 0 and low amounts of granules more clear. 
-Currently it seems that there are more granules in the edge cases then there actually are. 
-
-
-# Jack
-Finish full draft of chapter 4.
-
 # Pekka
 Vacation: when are you on vacation?
     -> 28. Juni og hele Juli
@@ -147,5 +128,8 @@ Sodium Arsinite 2020- the one i have used
 
 2019-12-09 - Ctrlomozone
 
+# Pekka Questions
 
-[Implement new GE version.]
+Chapter 3: How much background should i provide on the selected model architectures and encoders?
+
+Chapter 4: Justification of hyperparamter value choices.
