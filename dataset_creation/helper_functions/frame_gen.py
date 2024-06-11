@@ -176,7 +176,7 @@ def bioformatsGen(im_path):
 
     # Extract the relevant terms
     pixelData = o.image().Pixels
-    pixel_size = pixelData.PhysicalSizeX
+    pixel_size = pixelData.PhysicalSizeX # TODO: Print this out? Might be the size of a pixel in (micron meter? some other unit?)  
     n_slices = pixelData.SizeZ
     n_frames = pixelData.SizeT
     print("PIXEL: ",pixel_size)

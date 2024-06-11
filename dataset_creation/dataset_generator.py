@@ -154,6 +154,10 @@ def label_and_image_YOLOv8(project_dir, filename):
             assert all(granule_fourier['granule_id'].compare(granule_fourier_old['granule_id'])), "Not the same"
             assert all(granule_fourier['granule_id'] == granule_fourier_old['granule_id']), "Not the same"
             
+            #  ------------------- Skip valid granules with no radius ------------------- 
+            mean_radius = granule_fourier['mean_radius'].iloc[0]
+            if mean_radius == 0:
+                continue            
             #  ------------------- Get image of granule ------------------- 
             bbox_left = granule_fourier['bbox_left'].iloc[0]
             bbox_right = granule_fourier['bbox_right'].iloc[0]
