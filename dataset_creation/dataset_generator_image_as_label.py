@@ -28,66 +28,54 @@ import platform
 plt2 = platform.system()
 if plt2 == 'Windows': pathlib.PosixPath = pathlib.WindowsPath
 
-def plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier):
-    fig = make_subplots(rows=1, cols=3, 
-                    horizontal_spacing=0.05, 
-                    vertical_spacing=0.1,
-                    subplot_titles=('Standard image', 'Upscale Nearest', 'Mask fill'))
-    # ------ Column 1 ------
-    xs, ys = get_coords(granule_fourier, get_relative=True)
-    xs = np.append(xs,xs[0])
-    ys = np.append(ys,ys[0]) 
+def plot(granule_image, label, valid_granule_id, granule_fourier: pd.DataFrame):
+    # xs, ys = get_coords(granule_fourier, get_relative=True)
+    # xs = np.append(xs,xs[0])
+    # ys = np.append(ys,ys[0]) 
+    # ------ Centre of granule ------
     x_centre = granule_fourier['x'].iloc[0]
     y_centre = granule_fourier['y'].iloc[0]
     bbox_left2 = granule_fourier['bbox_left'].iloc[0]
     bbox_bottom2 = granule_fourier['bbox_bottom'].iloc[0]
-    x_pos_relative = x_centre - bbox_left2
-    y_pos_relative = y_centre - bbox_bottom2
-    fig.add_trace(go.Scatter(x=[y_pos_relative], y=[x_pos_relative], marker=dict(color='red', size=16), name=f"Centre"), row=1, col=1)
-    fig.add_trace(go.Heatmap(z=granule_cutout_image, colorscale='viridis'), row=1, col=1)
 
-    # Calculate and draw boundry for first plot
-    # xs_pixels, ys_pixels = pixels_between_points(xs, ys)
-    # fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=1)
-
-    fig.add_trace(go.Scatter(x=xs, y=ys, marker=dict(color='red', size=16), name=f"400 p border {valid_granule_id}"), row=1, col=1)
-
-    xs_pixels, ys_pixels = pixels_between_points(xs_upscaled, ys_upscaled)
-    # fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=2)
-    # fig.add_trace(go.Scatter(x=xs_upscaled, y=ys_upscaled, marker=dict(color='red', size=16), name=f"400p upscaled border3 {valid_granule_id}"), row=1, col=2)
+    fig = make_subplots(rows=1, cols=2, 
+                    horizontal_spacing=0.05, 
+                    vertical_spacing=0.1,)
+    # --- Col 1 --- 
+    fig.add_trace(go.Heatmap(z=granule_image, colorscale='viridis'), row=1, col=1)
+    # fig.add_trace(go.Scatter(x=xs, y=ys, marker=dict(color='black', size=40), name=f"400 p border {valid_granule_id}"), row=1, col=1 )
+    # fig.add_trace(go.Scatter(x=[y_pos_relative], y=[x_pos_relative], marker=dict(color='red', size=16), name=f"Centre"), row=1, col=1)
+    # --- Col 2 --- 
+    fig.add_trace(go.Heatmap(z=label, colorscale='viridis'), row=1, col=2)
+    # fig.add_trace(go.Scatter(x=xs, y=ys, marker=dict(color='black', size=40), name=f"400 p border {valid_granule_id}"), row=1, col=2)
+    # --- Annotation letters ---
+    fig.add_annotation(text="A",
+                  xref="paper", yref="paper",
+                  x=0.005, y=1, showarrow=False)
+    fig.add_annotation(text="B",
+                    xref="paper", yref="paper",
+                    x=0.54, y=1, showarrow=False)
+    fig.update_annotations(font=dict(family="DejaVu Sans", size=50, color="white"))
     
-    # -----------------------------
-    border_image = np.zeros((1024,1024))
-    for i in range(len(xs_pixels)):
-        border_image[ys_pixels[i], xs_pixels[i]] = 1
-
-    import skimage as ski
-
-    flood_fill = ski.morphology.flood(border_image, (512,512), connectivity=1)
-    border_image[flood_fill == True] = 60000
-    for i in range(len(xs_pixels)):
-        border_image[ys_pixels[i], xs_pixels[i]] = 60000
-
-    ### base_image_fig = px.imshow(border_image) 
-    ### fig.add_trace(base_image_fig.data[0], 1, 3)
-     
-    # im_smoothed = ski.filters.gaussian(granule_cutout_image, 1.5)
-    # fig.add_trace(go.Heatmap(z=im_smoothed, colorscale='viridis'), row=1, col=3)
-    fig.add_trace(go.Heatmap(z=border_image, colorscale='viridis'), row=1, col=3)
-    fig.add_trace(go.Scatter(x=xs_pixels, y=ys_pixels, marker=dict(color='cyan', size=16), name=f"Pixel border {valid_granule_id}"), row=1, col=2)
-    # -----------------------------
-
-    # upscaled_image[border_image == 60000] = 60000
-    # upscaled_image_fig = px.imshow(upscaled_image)
-    ### fig.add_trace(upscaled_image_fig.data[0], 1, 2)
-    fig.add_trace(go.Heatmap(z=upscaled_image, colorscale='viridis'), row=1, col=2)
-
-
-
-    im_path = granule_fourier['im_path'].iloc[0]
-    im_path = Path(im_path).stem
-    fig.update_layout(title_text=f"{im_path} Granule {valid_granule_id}", title_x=0.5, showlegend=False, font_size=11)
-    fig.update_yaxes(autorange='reversed') # Ensure granules are not flipped. Plotly has strange axis direction defaults...
+    # --- Layout ---
+    fig.update_layout(showlegend=False, font_size=35)
+    fig.update_layout(
+        autosize=False,
+        width=1700,
+        height=1000,
+    )
+    # fig.update_coloraxes(showscale=False) 
+    fig.update_layout({
+        "paper_bgcolor": "rgba(0, 0, 0, 0)",
+        "plot_bgcolor": "rgba(0, 0, 0, 0)", })
+    fig.update_layout(
+        font_family="DejaVu Sans",
+        font_color="black",
+        title_font_family="DejaVu Sans",
+        title_font_color="black",
+    )
+    fig.update_traces(dict(showscale=False, coloraxis=None,), selector={'type':'heatmap'}) # 2020-02-05_14.36.40--NAs--T1354-GFP_Burst | Valid granule 1
+    # fig.write_image(file="D:/Master/MasterProject/Overleaf_figures/Chapter4/StressGranule_and_CourseBorder.svg", scale=4)
     fig.show()
     
 
@@ -261,13 +249,14 @@ def generate_granule_cutout_images(ims_file_directory_path: Path = "",
     """
     """
     current_file = Path(__file__).resolve() # TODO: FIX THIS PATH MESS
-    project_dir = current_file.parents[1] / "dataset_creation/data/"
+    # project_dir = current_file.parents[1] / "dataset_creation/data/"
+    project_dir = current_file.parents[1] / "D:/Granule_experiment_data/"
 
-    image_files = [file[:-4] for file in os.listdir(f"{project_dir}\ALL_IMS")]
+    image_files = [file[:-4] for file in os.listdir(f"{project_dir}\ALL_IMS") if os.path.isfile(f"{project_dir}\ALL_IMS\{file}")]
     # image_files= ['2020-02-05_14.35.36--NAs--T1354-GFP_Burst'] # This one
     
     # image_files= image_files[:6]
-    image_files= ['2020-02-05_14.36.40--NAs--T1354-GFP_Burst']
+    # image_files= ['2020-02-05_14.36.40--NAs--T1354-GFP_Burst']
 
     # processes: list[Process] = []
     image_files_queue = Queue() 
@@ -322,6 +311,8 @@ def label_and_image_YOLOv8(project_dir, filename):
         "granule_id":[],
         "width":[],
         "height":[],	
+        "label_size":[],	
+        "label_size_percent":[],	
         "filename_full":[]
     }
 
@@ -339,12 +330,17 @@ def label_and_image_YOLOv8(project_dir, filename):
         image_data = frame.im_data
 
         for valid_granule_id in valid_granule_ids: # For each valid granule in frame
-        # for valid_granule_id in [5]: # For each valid granule in frame
+        # for valid_granule_id in [5]: # For each valid granule in frame 
             #  ------------------- Get boundry ------------------- 
             granule_fourier = valid_granule_fourier[(valid_granule_fourier['granule_id'] == valid_granule_id) & (valid_granule_fourier['frame'] == frame_id)]
             # granule_fourier_old = image_analysed_results_df[(image_analysed_results_df['granule_id'] == valid_granule_id) & (image_analysed_results_df['frame'] == frame_id)]
             # assert all(granule_fourier['granule_id'].compare(granule_fourier_old['granule_id'])), "Not the same"
             # assert all(granule_fourier['granule_id'] == granule_fourier_old['granule_id']), "Not the same"
+
+            mean_radius = granule_fourier['mean_radius'].iloc[0]
+            if mean_radius == 0:
+                print("\n MEAN RADIUS WAS 0 \n")
+                continue
             
             #  ------------------- Get image of granule ------------------- 
             bbox_left = granule_fourier['bbox_left'].iloc[0]
@@ -354,9 +350,10 @@ def label_and_image_YOLOv8(project_dir, filename):
             granule_cutout_image = image_data[bbox_left:bbox_right, bbox_bottom:bbox_top]
 
             # if valid_granule_id == 1: #use 3,  2 is also good for testing
-            if valid_granule_id == 1: #use 3,  2 is also good for testing
-                plot_single(image_data, granule_cutout_image, valid_granule_id, granule_fourier)
-                exit()
+            # if valid_granule_id == 1: #use 3,  2 is also good for testing
+            #     # plot_single(image_data, granule_cutout_image, valid_granule_id, granule_fourier)
+            #     plot(image_data, granule_cutout_image, valid_granule_id, granule_fourier)
+            #     exit()
             # ------------------- Scaling the granule cutout ------------------- 
             original_image = Image.fromarray(granule_cutout_image)
             cutout_height, cutout_width = abs(bbox_left-bbox_right), abs(bbox_bottom - bbox_top)
@@ -406,13 +403,28 @@ def label_and_image_YOLOv8(project_dir, filename):
             # with open(f"datasets/cutout_with_padding/all_data/labels/{origin_ims_file}_Frame_{frame.frame_num}_Granule_{valid_granule_id}.txt", "w+") as f:
             #     f.write(''.join(yolov8_granule_string))
             #     f.close()
+            
+            # ------------------- Save label as image (.png) ------------------- 
+            try: # In case of failure, ignore granule and move on.
+                border_image = np.zeros((1024,1024))
+                for i in range(len(xs_pixels)):
+                    border_image[ys_pixels[i], xs_pixels[i]] = 1
+                flood_fill = ski.morphology.flood(border_image, (512,512), connectivity=1)
+                border_image[flood_fill == True] = 1
+            except:
+                continue
+            ## plt.imsave(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image)
+            # THIS ONE FOR ACTUAL LABEL IMAGE
+            cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image) # TODO: Uncomment this
+            # Might speed up saving: https://stackoverflow.com/questions/58231354/slow-matplotlib-savefig-to-png
+
             # ------------------- Save granule_cutout to .png ------------------- 
             # plt.imsave(f"datasets/cutout_with_padding/all_data/images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png.png", upscaled_image)
             assert upscaled_image.shape == (1024,1024), f"Wrong shape, was {upscaled_image.shape} should be (1024,1024)"
             # THIS ONE FOR ACTUAL GRANULE IMAGE
-            # cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
+            cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
             # THIS ONE FOR GRADIENT IMAGE
-            # cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit_gradient/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}_gradient.png", upscaled_gradient_image)
+            cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit_gradient/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}_gradient.png", upscaled_gradient_image)
             ### cv2.imwrite(f"datasets/cutout_with_padding/all_data/images_grayscale_16bit/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", upscaled_image)
             
             # ----------------- Save 2-channel image of granule and gradient -------------
@@ -421,32 +433,26 @@ def label_and_image_YOLOv8(project_dir, filename):
             # upscaled_2channel_image = np.concatenate((image,gradient), axis=2)
             # np.save(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_grayscale_16bit_2channel/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}_twochannel", upscaled_2channel_image)
             
-            # ------------------- Save label as image (.png) ------------------- 
-            # border_image = np.zeros((1024,1024))
-            # for i in range(len(xs_pixels)):
-            #     border_image[ys_pixels[i], xs_pixels[i]] = 1
-            # flood_fill = ski.morphology.flood(border_image, (512,512), connectivity=1)
-            # border_image[flood_fill == True] = 1
-            ## plt.imsave(f"datasets/cutout_with_padding/all_data/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image)
-            # THIS ONE FOR ACTUAL LABEL IMAGE
-            # cv2.imwrite(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/labels_as_images/{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png", border_image) # TODO: Uncomment this
-            # Might speed up saving: https://stackoverflow.com/questions/58231354/slow-matplotlib-savefig-to-png
 
             # Save info
-            # data_analysis_to_save["filename"].append(filename)
-            # data_analysis_to_save["frame"].append(frame_num)
-            # data_analysis_to_save["granule_id"].append(valid_granule_id)
-            # data_analysis_to_save["width"].append(bbox_right-bbox_left )
-            # data_analysis_to_save["height"].append(bbox_top-bbox_bottom)
-            # data_analysis_to_save["filename_full"].append(f"{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png")
+            data_analysis_to_save["filename"].append(filename)
+            data_analysis_to_save["frame"].append(frame_num)
+            data_analysis_to_save["granule_id"].append(valid_granule_id)
+            data_analysis_to_save["width"].append(bbox_right-bbox_left )
+            data_analysis_to_save["height"].append(bbox_top-bbox_bottom)
+            label_size = np.sum(border_image)
+            data_analysis_to_save["label_size"].append(label_size)
+            data_analysis_to_save["label_size_percent"].append((label_size / (1024*1024)))
+            data_analysis_to_save["filename_full"].append(f"{filename}_Frame_{frame_num}_Granule_{valid_granule_id}.png")
 
-            # plot(granule_cutout_image, upscaled_image, valid_granule_id, xs_upscaled, ys_upscaled, granule_fourier)
-            # return
-            # if frame_id == 1:
-            #     return
+            # plot(upscaled_gradient_image,border_image, valid_granule_id, granule_fourier)
+            # plot(upscaled_image, border_image, valid_granule_id, granule_fourier)
+            # exit()
+        #     break
+        # break
 
-    # data_analysis_to_save = pd.DataFrame(data_analysis_to_save)
-    # data_analysis_to_save.to_csv(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_saved_analysis_data/{filename}.csv", index_label=False)
+    data_analysis_to_save = pd.DataFrame(data_analysis_to_save)
+    data_analysis_to_save.to_csv(f"D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/images_saved_analysis_data/{filename}.csv")
         
     # Clean up
     del image_analysed_results_df
@@ -511,18 +517,18 @@ def split_list_by_nth(list_to_split: list, split_number=10):
     return files_train, files_val
 
 
-def scale_stretch(original_image: Image, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> np.array:
-    """Stretches the image to new given size, irrespective of original aspect ratio.
+# def scale_stretch(original_image: Image, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> np.array:
+#     """Stretches the image to new given size, irrespective of original aspect ratio.
 
-    Args:
-        original_image (Image): Image to stretch
-        NEW_MAX_HEIGHT (int, optional): _description_. Defaults to 1024.
-        NEW_MAX_WIDTH (int, optional): _description_. Defaults to 1024.
+#     Args:
+#         original_image (Image): Image to stretch
+#         NEW_MAX_HEIGHT (int, optional): _description_. Defaults to 1024.
+#         NEW_MAX_WIDTH (int, optional): _description_. Defaults to 1024.
 
-    Returns:
-        np.array: Resized image
-    """
-    return np.array(original_image.resize((NEW_MAX_HEIGHT, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST))
+#     Returns:
+#         np.array: Resized image
+#     """
+#     return np.array(original_image.resize((NEW_MAX_HEIGHT, NEW_MAX_WIDTH), resample=Image.Resampling.NEAREST))
 
 def scale_padding(original_image, img_dims: tuple[int,int], granule_fourier: pd.DataFrame, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> tuple[np.array, np.array, np.array]:
     # ------------------- Upscale image -------------------
