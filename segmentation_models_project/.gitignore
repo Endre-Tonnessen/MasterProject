@@ -7,3 +7,4 @@ TRAINING_RESULTS/old/*
 TRAINING_RESULTS
 TRAINING_RESULTS_new
 __pycache__
+*.pth
