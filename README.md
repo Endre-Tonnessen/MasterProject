@@ -122,7 +122,10 @@ cd /export/gressheid/granule_explorer/src/granule_explorer
 # Command
 snakemake -d "experiment_directory"
 
-nohop snakemake --use-conda -j 44 -d "experiment_dir" &
+nohop snakemake --use-conda -j 48 -d "experiment_dir" &
+
+# -k -> Complete, continous if error arises
+snakemake -k --use-conda -j 44 -d "ML_2019-10-31"
 
 # Add source ims directory to config file
 
