@@ -1,7 +1,7 @@
 # import huggingface_hub
 # huggingface_hub.accept_access_request
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 import torch
 import numpy as np
 import segmentation_models_pytorch as smp
@@ -40,10 +40,8 @@ Path("./TRAINING_RESULTS").mkdir(parents=True, exist_ok=True) # tmux -> ctrl+s t
 Path("./TRAINING_RESULTS/temp").mkdir(parents=True, exist_ok=True) 
 
 # -------- Dataset --------
-# DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_tiny"
-# DATA_DIR = "D:/Master/MasterProject/dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient"
 dataset_feature = "two_channel"
-DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/normal/"
+DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_large_even_labels/normal/"
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/labels')
 
@@ -57,24 +55,27 @@ CONTINOUE_FROM_LAST = False
 CHANNELS_IN_IMAGE = 2
 gradient_dir_optional = "None"
 if CHANNELS_IN_IMAGE == 2:
-    gradient_dir_optional = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_medium_equal_label_size/gradient/"
+    gradient_dir_optional = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled_datasets_16bit_large_even_labels/gradient/"
 
 #TODO: Implement Focal loss, use kaggle steel competition version
 
 # models = [smp.DeepLabV3Plus, smp.MAnet, smp.PSPNet, smp.FPN, smp.PAN, smp.Linknet, smp.UnetPlusPlus] 
 models = [smp.DeepLabV3Plus] 
-ENCODERS = ['timm-efficientnet-b1']#, 'tu-xception41', 'tu-resnetv2_101', 'tu-resnetv2_50', 'resnet101', 'resnet34'] # 'tu-xception71' <- batch 10
-# ENCODERS = ['resnet101'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
-# loss_functions = [BinaryLovaszLoss(), FocalLoss(), BCEJaccardLoss(), BCEDiceLoss(), DiceLoss(), BCELoss(), JaccardLoss()] 
+# ENCODERS = ['timm-efficientnet-b1', 'tu-xception41', 'resnet101', 'resnet34'] # 'tu-xception71' <- batch 10
+ENCODERS = ['timm-efficientnet-b2']#, 'timm-efficientnet-b1', 'tu-xception41', 'resnet101', 'resnet34'] # 'tu-xception71' <- batch 10
+# ENCODERS = ['resnet34'] #['resnet101', 'mobilenet_v2']#, 'efficientnet-b0', 'resnet34']
+# loss_functions = [BinaryLovaszLoss(), FocalLoss(), BCEJaccardLoss(), BCEDiceLoss(), DiceLoss(), BCELoss()]#, JaccardLoss()] 
 loss_functions = [JaccardLoss()] 
-freeze = [True]#, True] # True 
+# freeze = [False, True]#, True] # True 
+freeze = [False]#, True] # True 
+LR = 0.0001 # 1e-4
 
 for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.cuda.reset_peak_memory_stats()
 
     architecture, ENCODER, loss_func, freeze_encoder = data
     print("\n ------------------------")
-    print(f"Now training: {architecture()._get_name()} with {ENCODER} using {loss_func._get_name()} | Encoder freeze: {freeze_encoder} | Data feature: {dataset_feature}")
+    print(f"Now training: {architecture()._get_name()} with {ENCODER} using {loss_func._get_name()} | Encoder freeze: {freeze_encoder} | Data feature: {dataset_feature} | LR: {LR}")
 
     ENCODER_WEIGHTS = 'imagenet'
     CLASSES = ['granule']
@@ -89,12 +90,12 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         in_channels=CHANNELS_IN_IMAGE # For grayscale
     )
     # ----- Skip training if already done -----
-    potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
+    potential_file = Path(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}.csv")
     if potential_file.exists():
         if not CONTINOUE_FROM_LAST:
-            print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}. Skipping \n")
+            print(f"Results already exists for {model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}. Skipping \n")
             continue
-        model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
+        model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}.pth")
 
     # model.load_state_dict()
     # Use same preprocessing method as the encodes trained dataset
@@ -140,7 +141,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     ]
 
     optimizer = torch.optim.Adam([ 
-        dict(params=model.parameters(), lr=0.0001),
+        dict(params=model.parameters(), lr=0.001),
     ])
     schedular = ReduceLROnPlateau(optimizer=optimizer, factor=0.6, mode="min", patience=1) # TODO: Print lr for each epoch
 
@@ -173,7 +174,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # Create logging dict
     df = create_log_dict(metrics, loss_func)
 
-    for i in range(0, 20): # TODO: Implement early stopping
+    for i in range(0, 60): # TODO: Implement early stopping
         
         print(f"\nEpoch: {i} | {model._get_name()}__{ENCODER}__{loss_func._get_name()}")
         # Logging
@@ -184,12 +185,12 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
         df = log_training(df, train_logs, valid_logs) # Save stats
         # Step learning rate
         schedular.step(valid_logs['loss'])
-        pd.DataFrame(df).to_csv(f"./TRAINING_RESULTS/temp/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
+        pd.DataFrame(df).to_csv(f"./TRAINING_RESULTS/temp/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}.csv")
 
         # do something (save model, change lr, etc.)
         if max_score < valid_logs['iou_score']: 
             max_score = valid_logs['iou_score']
-            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
+            torch.save(model, f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}.pth")
             print('Model saved!')
             
         # if i == 7:
@@ -199,7 +200,7 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     # torch.save(model, f"./MODELS/last_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()__Freeze_encoder_{freeze_encoder}}.pth")
 
     # Test inference speed of best model
-    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.pth")
+    best_model = torch.load(f"./MODELS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}.pth")
     cycles = 10
     times = []
     for i in range(cycles):
@@ -232,9 +233,9 @@ for i, data in enumerate(product(models, ENCODERS, loss_functions, freeze)):
     if potential_file.exists() and CONTINOUE_FROM_LAST: # Merge
         exiting_df = pd.read_csv(potential_file, index_col=0)
         df = pd.concat((exiting_df, df), ignore_index=True)
-        df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
+        df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}.csv")
     else: # Overwrite exiting file
-        df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}.csv")
+        df.to_csv(f"./TRAINING_RESULTS/best_model__{model._get_name()}__{ENCODER}__{loss_func._get_name()}__Freeze_encoder_{freeze_encoder}__{dataset_feature}__LR_{LR}.csv")
     
     # Memory handling
     del model

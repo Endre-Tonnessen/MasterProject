@@ -133,3 +133,27 @@ Sodium Arsinite 2020- the one i have used
 Chapter 3: How much background should i provide on the selected model architectures and encoders?
 
 Chapter 4: Justification of hyperparamter value choices.
+
+Kjempeduru: 'top' command to see cpu usage. Google it.
+
+
+# Central Conda env for central GE
+### Clone this env and install the packges that 
+conda activate granule_explorer_core
+
+# Central GE version. 
+cd /export/gressheid/granule_explorer/src/granule_explorer 
+
+# Snakefile
+/export/../graule_Explorer/experiments/snakefile -> Overwrite this to snakefileIMS
+
+# Command
+snakemake -d "experiment_directory"
+
+nohop snakemake --use-conda -j 48 -d "experiment_dir" &
+
+# Add source ims directory to config file
+
+
+NB:
+Missions, snakefile
