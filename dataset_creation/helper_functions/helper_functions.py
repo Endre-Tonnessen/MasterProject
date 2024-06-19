@@ -2,13 +2,12 @@ import pandas as pd
 import numpy as np
 import math
 
-def get_coords(granule_fourier2: pd.DataFrame, get_relative=False):
+def get_coords(granule_fourier2: pd.DataFrame, get_relative=False, fix=True):
     """Calculates the exact border coordinates for the given granule in an image
 
     Args:
         granule_fourier2 (pd.DataFrame): Granule in datarame
         get_relative (bool): If function should return coords relative to the granules bounding box and not the entire image. Useful for plottin granule cutouts from an image frame.
-        REMOVE: scale_factor (int): Scale the boundry. Default is 1. Useful for getting boundries of upsized granule cutouts.
     Returns:
         Two lists, xs and ys, containing coords of boundry
     """
@@ -28,7 +27,14 @@ def get_coords(granule_fourier2: pd.DataFrame, get_relative=False):
     y_pos_relative = y_pos - bbox_bottom
 
     angles2 = np.linspace(0,2*np.pi,400) # sample 400 angles, as in boundary_extraction.py
-    magnitudes_2 = np.append( np.array([0.0+0.0j, 0.0+0.0j]), magnitude) * 400
+    if fix:
+        order_1 = granule_fourier2['order_1'].iloc[0]
+        magnitudes_2 = np.append( np.array([0.0+0.0j, order_1]), magnitude) * 400
+    else:
+        raise Exception("Running without fix! Is this correct?")
+        magnitudes_2 = np.append( np.array([0.0+0.0j, 0.0+0.0j]), magnitude) * 400
+    # order_1 = granule_fourier2['order_1'].iloc[0]
+    # magnitudes_2 = np.append( np.array([0.0+0.0j, order_1]), magnitude) * 400
     radii_12 = mean_radius + np.fft.irfft(magnitudes_2, 400)  
 
     # Where to position the granule relative to image
