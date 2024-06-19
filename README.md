@@ -104,6 +104,8 @@ Chapter 3: How much background should i provide on the selected model architectu
 
 Chapter 4: Justification of hyperparamter value choices.
 
+# --------------------- Kjempefuru ---------------------------------
+
 Kjempeduru: 'top' command to see cpu usage. Google it.
 
 
@@ -120,7 +122,7 @@ cd /export/gressheid/granule_explorer/src/granule_explorer
 # Command
 snakemake -d "experiment_directory"
 
-nohop snakemake --use-conda -j 48 -d "experiment_dir" &
+nohop snakemake --use-conda -j 44 -d "experiment_dir" &
 
 # Add source ims directory to config file
 
