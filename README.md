@@ -15,7 +15,12 @@ Need to make a larger dataset for training. Current training set is composed fro
 
         # New files | USE THIS ONE
             scp kjempefuru:/export/grellscheidfs/microscopy/2019-10-31/2019-10-31_12.18.43--NControlLongB--T1015-Burst.h5 .
-            scp kjempefuru:/export/grellscheidfs/microscopy/2019-12-09/* .
+            scp kjempefuru:/export/grellscheidfs/microscopy/2019-12-09/* . # Fully DONE. Have fourier and fittings.h5
+            scp kjempefuru:/export/grellscheidfs/microscopy/2020-02-05/* . # Copied over
+            scp kjempefuru:/export/grellscheidfs/microscopy/2019-10-31/* . # Not copied or started
+        
+        # Copy from birget to Home pc
+        scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2019-10-31__1/fourier/* .
         
         # Maybe better command. TEST THIS WITH SOME PRIVATE FILES!!!
             rsync -aHAXxv --numeric-ids --progress -e "ssh -T -c aes128-ctr -o Compression=no -x" . kjempefuru:some_local_project
