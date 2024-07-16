@@ -92,7 +92,7 @@ def visualize_better(granule_name, image,gradient,gradient_method, ML_method,bor
     fig.tight_layout()
     fig.suptitle(granule_name)
     fig.subplots_adjust(top=0.88)
-    fig.savefig(f"/Home/siv32/eto033/MasterProject/GE_result_analysis/figs2/debug_image{np.random.randint(0,1000000)}.png")
+    fig.savefig(f"/Home/siv32/eto033/MasterProject/GE_result_analysis/figs9/debug_image{np.random.randint(0,1000000)}.png")
 
 def ML_run_model(cropped_image, local_centre):
     original_image = Image.fromarray(cropped_image) 
@@ -132,7 +132,7 @@ def read_csv(base_filename):
     # comp_df['file'] = pathlib.Path(full_path).stem 
 
 def print_granules():
-    csv = read_csv("test.csv")
+    csv = read_csv("test_above9.csv")
 
     for i, file in enumerate(csv.groupby('file')):
         filename = file[0]
@@ -222,13 +222,13 @@ def print_granules():
                 # )   
 
                 visualize_better(
-                    granule_name=f"{filename[:19]} F: {wanted_frame} ID: {wanted_granule_id}",
+                    granule_name=f"{filename[:19]} F: {wanted_frame} ID: {wanted_granule_id} IoU: {data['IoU']}",
                     image=scale_image_add_padding(Image.fromarray(granule_cutout_image)),
                     gradient=scale_image_add_padding(Image.fromarray(upscaled_gradient_granule_image)),
                     gradient_method=border_image, 
                     ML_method=result_mask,
                     border_float=(xs_upscaled, ys_upscaled),
-                    boder_pixel=(xs_pixels, ys_pixels)
+                    boder_pixel=(xs_pixels, ys_pixels),
                 )   
 
         #         return
