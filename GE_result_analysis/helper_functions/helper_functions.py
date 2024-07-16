@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 import math
+from PIL import Image, ImageOps
+from dataclasses import dataclass
+from scipy.ndimage import filters
+import skimage as ski
 
 def get_coords(granule_fourier2: pd.DataFrame, get_relative=False, fix=True):
     """Calculates the exact border coordinates for the given granule in an image
@@ -48,44 +52,204 @@ def get_coords(granule_fourier2: pd.DataFrame, get_relative=False, fix=True):
         ys = scale*radii_12*np.cos(angles2)+x_pos
         xs = scale*radii_12*np.sin(angles2)+y_pos
         return xs, ys
-
-# def pixels_between_points_OLD(xs: list[float], ys: list[float], precision: int = 5, scale_factor_x=1, scale_factor_y=1) -> list[list[int],list[int]]:
-#     """
-#         From two lists, x and y-coords, returns every pixel intersected by the linesegments between the coordinates.
-
-#     Args:
-#         xs (list[float]): x-coords
-#         ys (list[float]): y-coords
-#         precision (int): Amount of points in the linspace between two coordinates.
-#         scale_factor (int): Scales the coordinates by an int. Default is 1.
-#     Returns:
-#         Two lists, xs and ys containing coordinates for every intersected pixel.
-#     """
-#     assert len(xs) == len(ys), f"Coordinate lists must be of equal length, was xs={len(xs)}, ys={len(ys)}"
     
-#     # Phi, the offset introduced by scaling the image. Error due to subpixel math. TODO: Look more into this. Explain why this happens.
-#     offset_push_x = scale_factor_x / 2 - 1/2
-#     offset_push_y = scale_factor_y / 2 - 1/2 
-#     # Scale coordinates
-#     xs = offset_push_x+np.array(xs)*scale_factor_x
-#     ys = offset_push_y+np.array(ys)*scale_factor_y
+    
+def scale_image_add_padding(original_image: Image, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> np.array:
+    """Upscales image to its max possible size while keeping aspect ratio. Any space left is filled with padding. 
 
-#     x_pixels = np.array([])
-#     y_pixels = np.array([])
+    Args:
+        original_image (Image): Image to upscale
+        NEW_MAX_HEIGHT (int, optional): New max height of image. Defaults to 1024.
+        NEW_MAX_WIDTH (int, optional): New max width of image. Defaults to 1024.
 
-#     for i in range(len(xs)-1):
-#         x_0 = xs[i]
-#         y_0 = ys[i]
-#         x_1 = xs[i+1]
-#         y_1 = ys[i+1]
+    Returns:
+        np.array: Upscaled image with padding
+    """
+    # ------------------- Resize image -------------------
+    cutout_height, cutout_width = np.array(original_image).shape[:2]
+    max_scale_height = int(np.floor(NEW_MAX_HEIGHT / cutout_height))
+    max_scale_width  = int(np.floor(NEW_MAX_WIDTH / cutout_width))
+    scale_factor = min(max_scale_width, max_scale_height)
+    upscaled_image = original_image.resize((cutout_width*scale_factor, cutout_height*scale_factor), resample=Image.Resampling.NEAREST)
+    # ------------------- Add padding -------------------
+    image_width, image_height = upscaled_image.size
+    delta_w = NEW_MAX_WIDTH - image_width
+    delta_h = NEW_MAX_HEIGHT - image_height
+    padding = (delta_w//2, delta_h//2, delta_w-(delta_w//2), delta_h-(delta_h//2))
+    upscaled_image = ImageOps.expand(upscaled_image, padding)
+    return np.array(upscaled_image)
 
-#         x_space = np.linspace(x_0,x_1, precision) #        x_space = np.round(np.linspace(x_0,x_1, precision),0)
-#         y_space = np.linspace(y_0,y_1, precision) #        y_space = np.round(np.linspace(y_0,y_1, precision),0)
-#         x_pixels = np.append(x_pixels,x_space)
-#         y_pixels = np.append(y_pixels,y_space)
+def scale_padding(original_image, img_dims: tuple[int,int], granule_fourier: pd.DataFrame, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> tuple[np.array, np.array, np.array]:
+    # ------------------- Upscale image -------------------
+    cutout_height, cutout_width = img_dims
+    max_scale_height = int(np.floor(NEW_MAX_HEIGHT / cutout_height))
+    max_scale_width  = int(np.floor(NEW_MAX_WIDTH / cutout_width))
+    scale_factor = min(max_scale_height, max_scale_width) # Max amount to scale by while keeping aspect ratio
+    upscaled_image = original_image.resize((cutout_width*scale_factor, cutout_height*scale_factor), resample=Image.Resampling.NEAREST)
+    # ------------------- Add padding -------------------
+    # assert upscaled_image.size == (NEW_MAX_HEIGHT, NEW_MAX_WIDTH), f"New size of image is wrong. What? Was {upscaled_image.size} should be {NEW_MAX_HEIGHT, NEW_MAX_WIDTH}"
+    image_width, image_height = (cutout_width*scale_factor, cutout_height*scale_factor)
+    delta_w = NEW_MAX_WIDTH - image_width
+    delta_h = NEW_MAX_HEIGHT - image_height
+    padding = (delta_w//2, delta_h//2, delta_w-(delta_w//2), delta_h-(delta_h//2))
+    new_im = ImageOps.expand(upscaled_image, padding)
+    # ------------------- Get pixel border -------------------
+    xs, ys = get_coords(granule_fourier, get_relative=True)
+    xs = np.append(xs,xs[0]) # Add connection from last element to start element # TODO: Error is in here somewhere. Image upscaling is correct, problem with border? Titlted?
+    ys = np.append(ys,ys[0])
+    # --- Scale border points ---
+    assert (np.max(xs) <= cutout_width) and (np.max(ys) <= cutout_height), f"{np.max(xs)} <= {cutout_width} | {np.max(ys)} <= {cutout_height}"
+    xs_upscaled = xs * scale_factor + scale_factor / 2 - 1/2 
+    ys_upscaled = ys * scale_factor + scale_factor / 2 - 1/2
+    # --- Add padding to border points ---
+    xs_upscaled += delta_w // 2
+    ys_upscaled += delta_h // 2
+    upscaled_width, upscaled_height = new_im.size
+    assert (upscaled_width, upscaled_height) == (NEW_MAX_WIDTH, NEW_MAX_HEIGHT), f"Should be {(NEW_MAX_WIDTH, NEW_MAX_HEIGHT)} == {(upscaled_width, upscaled_height)}"
+    
+    # return None, xs_upscaled, ys_upscaled
+    return np.array(new_im), xs_upscaled, ys_upscaled
 
-#     return np.round(x_pixels,0), np.round(y_pixels,0) # Do floor instead. Remove 1/2 from the phi offset.
-#     # 
+# ------------------ Gradients of image -------------------------
+@dataclass
+class Kernels:
+    """ Implemenation of two seperable kernels that represent a gradient estimations. """
+
+    xx: np.ndarray
+    xy: np.ndarray
+    yx: np.ndarray
+    yy: np.ndarray
+    label: str
+
+    def gradient_x(self, image):
+        """ Apply the x kernels to get the gradient in the x direction. """
+        return apply_seperable_kernel(image, self.xx, self.xy)
+
+    def gradient_y(self, image):
+        """ Apply the y kernels to get the gradient in the x direction. """
+        return apply_seperable_kernel(image, self.yx, self.yy)
+    
+def apply_seperable_kernel(image, v_1, v_2):
+    """ Apply a separable kernel G to an image where K = v_2 * v_1.
+
+    Namely, v_1 is applied to the image first. """
+    output = np.zeros_like(image)
+    filter_kwargs = dict(mode="reflect", cval=0, origin=0)
+
+    filters.correlate1d(image, v_1, 1, output, **filter_kwargs)
+    filters.correlate1d(output, v_2, 0, output, **filter_kwargs)
+    return output
+
+fourth_order = Kernels(
+    np.array([1, -8, 0, 8, -1]) / 12.0,
+    [1],
+    [1],
+    np.array([1, -8, 0, 8, -1]) / 12.0,
+    "Central fourth order",
+)
+
+# ------------------------------------------------------------
+def scale_image_add_padding(original_image: Image, NEW_MAX_HEIGHT=1024, NEW_MAX_WIDTH=1024) -> np.array:
+    """Upscales image to its max possible size while keeping aspect ratio. Any space left is filled with padding. 
+
+    Args:
+        original_image (Image): Image to upscale
+        NEW_MAX_HEIGHT (int, optional): New max height of image. Defaults to 1024.
+        NEW_MAX_WIDTH (int, optional): New max width of image. Defaults to 1024.
+
+    Returns:
+        np.array: Upscaled image with padding
+    """
+    # ------------------- Resize image -------------------
+    cutout_height, cutout_width = np.array(original_image).shape[:2]
+    max_scale_height = int(np.floor(NEW_MAX_HEIGHT / cutout_height))
+    max_scale_width  = int(np.floor(NEW_MAX_WIDTH / cutout_width))
+    scale_factor = min(max_scale_width, max_scale_height)
+    upscaled_image = original_image.resize((cutout_width*scale_factor, cutout_height*scale_factor), resample=Image.Resampling.NEAREST)
+    # ------------------- Add padding -------------------
+    image_width, image_height = upscaled_image.size
+    delta_w = NEW_MAX_WIDTH - image_width
+    delta_h = NEW_MAX_HEIGHT - image_height
+    padding = (delta_w//2, delta_h//2, delta_w-(delta_w//2), delta_h-(delta_h//2))
+    upscaled_image = ImageOps.expand(upscaled_image, padding)
+    return np.array(upscaled_image)
+
+class _BoundaryExtractionGradient():
+    """ Extract the boundary of granule using a directional gradient.
+        this is for granule which appear as a solid blob in the microscope.
+
+    Input parameters
+    ----------
+
+    granule: Granule
+        Extract the boundary from this granule.
+
+
+    Methods
+    -------
+
+    process_image
+        calculate directional gradients for each pixel
+
+    """
+    def process_image(self, image, local_centre):
+        """ Create a directional gradient of the image.
+
+        This calculates the component of the gradient along the radial vector of
+        the granule.
+
+        This is much more resistant to other granules in the local area.
+        Further, the maximum of the gradient is much more reliable than some
+        arbitrary threshold value; while the sobel is useful for this, the use of
+        an absolute value of the gradient caused problems.
+        """
+
+        x_grad, y_grad = self.calculate_gradient(image)
+        x_rad, y_rad = self.get_angle_from_centre(image, local_centre)
+
+        self.processed_image = x_grad * x_rad + y_grad * y_rad
+        return self.processed_image
+
+    def get_angle_from_centre(self, image, local_centre):
+        """Return a normalised vector field of the angle from the local centre of the
+        granule.
+        """
+        crop_width, crop_height = image.shape
+        # Get a vector with the distance from the centre in the x and y directions
+        yDist = np.arange(crop_width) -  local_centre[1]
+        xDist = np.arange(crop_height) - local_centre[0]
+
+        # Turn this into a field
+        xx, yy = np.meshgrid(xDist, yDist)
+
+        # Normalise to unit vectors
+        mag = -np.sqrt(xx ** 2 + yy ** 2)
+
+        return xx / mag, yy / mag
+
+    def calculate_gradient(self, image: np.ndarray):
+        """ Calculate the gradient field of the image.
+
+        Parameters
+        ----------
+        image:np.ndarray
+            The image to use, if none is provided then use the raw image of the
+            granule.
+
+        Returns
+        -------
+        np.ndarray:
+            A XxYx2 array with the gradient field of the granule, the top most slice
+            is in the x direction and the second the y direction.
+
+        """
+        im_smoothed = ski.filters.gaussian(image, 1.5)
+
+        kern = fourth_order
+
+        x_grad = kern.gradient_x(im_smoothed)
+        y_grad = kern.gradient_y(im_smoothed)
+        return x_grad, y_grad
 
 # ------------------------------------------------------------------
 
@@ -101,6 +265,7 @@ def pixels_between_points(xs: list[float], ys: list[float]) -> tuple[list[int],l
         y_1 = ys[i+1] + 1/2 
 
         xs_intersected, ys_intersected = intersect(x_0, y_0, x_1, y_1)
+        assert (np.max(xs_intersected) <= 1024) and (np.max(ys_intersected) <= 1024), f"Number out of bounds \n x_ints: {np.max(xs_intersected)} y_ints: {np.max(ys_intersected)} Origin ({x_0, y_0}) to ({x_1, y_1})"
         x_pixels = np.append(x_pixels, xs_intersected)
         y_pixels = np.append(y_pixels, ys_intersected)
 
