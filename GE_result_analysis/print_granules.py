@@ -55,10 +55,11 @@ def visualize(**images, ):
     # plt.show()
 
 def visualize_better(granule_name, image,gradient,gradient_method, ML_method,border_float, boder_pixel):
+    # fig, ((ax1, ax2), (ax4, ax5)) = plt.subplots(nrows=2, ncols=2, figsize=(14, 10), layout='constrained')
     fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(nrows=2, ncols=3, figsize=(14, 10), layout='constrained')
     # Col 1
     a1 = sns.heatmap(image,ax=ax1, rasterized=True, cmap=plt.colormaps["viridis"], cbar=False) 
-    a1.plot(border_float[0], border_float[1])
+    a1.plot(border_float[0], border_float[1], color='red')
     a1.axis('off')
     a1.set_title("Base")
 
@@ -66,7 +67,7 @@ def visualize_better(granule_name, image,gradient,gradient_method, ML_method,bor
     # a4.axis('off')
     # a4.set_title("Gradient")
     a4 = sns.heatmap(image,ax=ax4, rasterized=True, cmap=plt.colormaps["viridis"], cbar=False) 
-    a4.plot(border_float[0], border_float[1])
+    a4.plot(border_float[0], border_float[1], color='red')
     a4.axis('off')
     a4.set_title("Base")
 
@@ -80,11 +81,13 @@ def visualize_better(granule_name, image,gradient,gradient_method, ML_method,bor
     a5.set_title("ML Method")
     # Col 3
     a3 = sns.heatmap(gradient_method, ax=ax3, rasterized=True, cmap=plt.colormaps["viridis"], cbar=False) 
+    a3.plot(border_float[0], border_float[1], color='red')
     a3.axis('off')
     a3.set_title("Overlap")
 
-    a6 = sns.heatmap(image, ax=ax6, rasterized=True, cmap=plt.colormaps["viridis"], cbar=False) 
-    sns.heatmap(ML_method, ax=ax6, rasterized=True, cmap=plt.colormaps["inferno"], cbar=False, alpha=0.5) 
+    a6 = sns.heatmap(ML_method, ax=ax6, rasterized=True, cmap=plt.colormaps["viridis"], cbar=False) 
+    # sns.heatmap(ML_method, ax=ax6, rasterized=True, cmap=plt.colormaps["inferno"], cbar=False, alpha=0.5) 
+    a6.plot(border_float[0], border_float[1], color='red')
     # ax6.imshow(ML_method, cmap=plt.colormaps["inferno"], alpha=0.5)
     a6.axis('off')
     a6.set_title("Overlap")
@@ -92,7 +95,7 @@ def visualize_better(granule_name, image,gradient,gradient_method, ML_method,bor
     fig.tight_layout()
     fig.suptitle(granule_name)
     fig.subplots_adjust(top=0.88)
-    fig.savefig(f"/Home/siv32/eto033/MasterProject/GE_result_analysis/figs9/debug_image{np.random.randint(0,1000000)}.png")
+    fig.savefig(f"/Home/siv32/eto033/MasterProject/GE_result_analysis/figs3/debug_image{np.random.randint(0,1000000)}.png")
 
 def ML_run_model(cropped_image, local_centre):
     original_image = Image.fromarray(cropped_image) 
@@ -132,7 +135,7 @@ def read_csv(base_filename):
     # comp_df['file'] = pathlib.Path(full_path).stem 
 
 def print_granules():
-    csv = read_csv("test_above9.csv")
+    csv = read_csv("test.csv")
 
     for i, file in enumerate(csv.groupby('file')):
         filename = file[0]
@@ -222,7 +225,7 @@ def print_granules():
                 # )   
 
                 visualize_better(
-                    granule_name=f"{filename[:19]} F: {wanted_frame} ID: {wanted_granule_id} IoU: {data['IoU']}",
+                    granule_name=f"{filename[:19]} F: {wanted_frame} ID: {wanted_granule_id} IoU: {np.round(row[1]['IoU'],2)}",
                     image=scale_image_add_padding(Image.fromarray(granule_cutout_image)),
                     gradient=scale_image_add_padding(Image.fromarray(upscaled_gradient_granule_image)),
                     gradient_method=border_image, 

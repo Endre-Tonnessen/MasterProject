@@ -1,3 +1,7 @@
+# Conda activation
+conda activate ~/.conda/envs/ml_training
+
+
 # Tasks
 
 # Get more .ims files with corresponding .h5 analysis files - DONE
@@ -16,8 +20,17 @@ Need to make a larger dataset for training. Current training set is composed fro
         # New files | USE THIS ONE
             scp kjempefuru:/export/grellscheidfs/microscopy/2019-10-31/2019-10-31_12.18.43--NControlLongB--T1015-Burst.h5 .
             scp kjempefuru:/export/grellscheidfs/microscopy/2019-12-09/* . # Fully DONE. Have fourier and fittings.h5
-            scp kjempefuru:/export/grellscheidfs/microscopy/2020-02-05/* . # Copied over
-            scp kjempefuru:/export/grellscheidfs/microscopy/2019-10-31/* . # Not copied or started
+            scp kjempefuru:/export/grellscheidfs/microscopy/2020-02-05/* . # Fully DONE.
+            scp kjempefuru:/export/grellscheidfs/microscopy/2019-10-31/* . # Done but not copied 
+
+            scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2020-02-05__1/fourier/data1/* . # DONE
+            scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2020-02-05__1/fourier/data2/* . # <-- Do this
+            scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2020-02-05__1/fourier/data3/* . # <-- Do this
+
+            scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2019-12-09__1/fourier/* . # <-- Do this
+            scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2019-12-09__2/fourier/* . # <-- Do this
+            scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2019-12-09__3/fourier/* . # <-- Do this
+
         
         # Copy from birget to Home pc
         scp birget:/Home/siv32/eto033/granule_explorer_core/experiments/ML_2019-10-31__1/fourier/* .
