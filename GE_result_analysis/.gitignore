@@ -7,3 +7,5 @@ old/comparison_results_old/*
 figs3
 figs9
 figs47
+*.csv
+.csv
