@@ -10,3 +10,4 @@ __pycache__
 *.pth
 old/TRAINING_RESULTS
 old/TRAINING_RESULTS_new
+*.csv
