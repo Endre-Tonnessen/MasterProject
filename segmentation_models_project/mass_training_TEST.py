@@ -1,7 +1,7 @@
 # import huggingface_hub
 # huggingface_hub.accept_access_request
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 import torch
 from segmentation_models_pytorch.utils.metrics import IoU, Accuracy, Fscore, Precision, Recall 
 from segmentation_models_pytorch.utils.train import TrainEpoch, ValidEpoch
@@ -47,7 +47,8 @@ def create_log_dict(metrics, loss):
 
 # -------- Dataset --------
 dataset_feature = "two_channel"
-DATA_DIR = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled/compiled_datasets_16bit_large_even_labels/normal/"
+COMPILED_DATASET = "compiled_datasets_16bit_30k_9k_even_labels"
+DATA_DIR = f"../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/{COMPILED_DATASET}/normal/"
 
 x_test_dir = os.path.join(DATA_DIR, 'test/images')
 y_test_dir = os.path.join(DATA_DIR, 'test/labels')
@@ -56,9 +57,12 @@ CONTINOUE_FROM_LAST = False
 CHANNELS_IN_IMAGE = 2
 gradient_dir_optional = "None"
 if CHANNELS_IN_IMAGE == 2:
-    gradient_dir_optional = "../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/compiled/compiled_datasets_16bit_large_even_labels/gradient/"
+    gradient_dir_optional = f"../dataset_creation/datasets/FINAL_DATASET_cutout_with_padding/{COMPILED_DATASET}/gradient/"
 
-model = torch.load("D:\Master\MasterProject\segmentation_models_project/best_model__DeepLabV3Plus__timm-efficientnet-b2__JaccardLoss__Freeze_encoder_False__two_channel__LR_0.001.pth")
+
+# model = torch.load("/Home/siv32/eto033/MasterProject/segmentation_models_project/MODELS/encoders/best_model__DeepLabV3Plus__timm-efficientnet-b2__JaccardLoss__Freeze_encoder_False__two_channel__LR_0.0001.pth")
+model = torch.load("/Home/siv32/eto033/MasterProject/segmentation_models_project/MODELS/training_further/best_model__DeepLabV3Plus__timm-efficientnet-b2__BCEJaccardLoss__Freeze_encoder_False__two_channel__LR_0.00001.pth")
+# model = torch.load("D:\Master\MasterProject\segmentation_models_project/best_model__DeepLabV3Plus__timm-efficientnet-b2__JaccardLoss__Freeze_encoder_False__two_channel__LR_0.001.pth")
 model.cuda()
 model.eval()
 
@@ -99,7 +103,7 @@ test_logs['loss'] = test_logs.pop(loss_func.__name__)
 df = log_training(df, test_logs, test_logs) # Save stats
 
 df = pd.DataFrame(df)
-df.to_csv(f"test_results.csv")
+df.to_csv(f"test_results_futer_1e-5.csv")
 
 
 
