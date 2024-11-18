@@ -11,3 +11,6 @@ figs47
 .csv
 .zip
 *.zip
+figs_for_thesis_IoU
+comparison_results_old
+comparison_results_old/*
