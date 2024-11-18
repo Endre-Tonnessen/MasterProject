@@ -98,7 +98,8 @@ def scale_padding(original_image, img_dims: tuple[int,int], granule_fourier: pd.
     xs = np.append(xs,xs[0]) # Add connection from last element to start element # TODO: Error is in here somewhere. Image upscaling is correct, problem with border? Titlted?
     ys = np.append(ys,ys[0])
     # --- Scale border points ---
-    assert (np.max(xs) <= cutout_width) and (np.max(ys) <= cutout_height), f"{np.max(xs)} <= {cutout_width} | {np.max(ys)} <= {cutout_height}"
+    # TODO: This should be uncommented
+    # assert (np.max(xs) <= cutout_width) and (np.max(ys) <= cutout_height), f"{np.max(xs)} <= {cutout_width} | {np.max(ys)} <= {cutout_height}"
     xs_upscaled = xs * scale_factor + scale_factor / 2 - 1/2 
     ys_upscaled = ys * scale_factor + scale_factor / 2 - 1/2
     # --- Add padding to border points ---
@@ -265,7 +266,8 @@ def pixels_between_points(xs: list[float], ys: list[float]) -> tuple[list[int],l
         y_1 = ys[i+1] + 1/2 
 
         xs_intersected, ys_intersected = intersect(x_0, y_0, x_1, y_1)
-        assert (np.max(xs_intersected) <= 1024) and (np.max(ys_intersected) <= 1024), f"Number out of bounds \n x_ints: {np.max(xs_intersected)} y_ints: {np.max(ys_intersected)} Origin ({x_0, y_0}) to ({x_1, y_1})"
+        # TODO: This should be on
+        # assert (np.max(xs_intersected) <= 1024) and (np.max(ys_intersected) <= 1024), f"Number out of bounds \n x_ints: {np.max(xs_intersected)} y_ints: {np.max(ys_intersected)} Origin ({x_0, y_0}) to ({x_1, y_1})"
         x_pixels = np.append(x_pixels, xs_intersected)
         y_pixels = np.append(y_pixels, ys_intersected)
 

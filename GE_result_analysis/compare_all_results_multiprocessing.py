@@ -22,8 +22,8 @@ plt.rcParams.update({'font.size': 26})
 pd.options.mode.chained_assignment = None
 
 import pathlib
-temp = pathlib.PosixPath
-pathlib.PosixPath = pathlib.WindowsPath
+# temp = pathlib.PosixPath
+# pathlib.PosixPath = pathlib.WindowsPath
 
 
 # def analyze_h5_files(ML_PATH: str, GRADIENT_PATH: str, verbose=False):
@@ -37,8 +37,15 @@ def analyze_h5_files(filenames, verbose=False):
     fourier_pd_ml = pd.read_hdf(
         ML_PATH, key="fourier", mode="r"
     )
+    nr_frames_gradient = fourier_pd_gradient.shape[0] # Total amount of frames
+    nr_frames_ml = fourier_pd_ml.shape[0]
+
     fourier_pd_gradient_valid = fourier_pd_gradient[(fourier_pd_gradient['valid'] == True)]
     fourier_pd_ml_valid = fourier_pd_ml[(fourier_pd_ml['valid'] == True)]
+
+    nr_frames_valid_gradient = fourier_pd_gradient_valid.shape[0] # Total number of valid frames
+    nr_frames_valid_ml = fourier_pd_ml_valid.shape[0]
+
     # assert fourier_pd_gradient_valid['frame'].max() == fourier_pd_ml_valid['frame'].max(), f"Unequal frames! Was {fourier_pd_gradient_valid['frame'].max()} != {fourier_pd_ml_valid['frame'].max()}"
     min_frames = np.min((fourier_pd_gradient_valid['frame'].max(), fourier_pd_ml_valid['frame'].max()))
     # assert (fourier_pd_gradient_valid['frame'].max() == fourier_pd_ml_valid['frame'].max()), f"{fourier_pd_gradient_valid['frame'].max()} != {fourier_pd_ml_valid['frame'].max()}"
@@ -241,7 +248,12 @@ def analyze_h5_files(filenames, verbose=False):
     df['Granules_in_common_count'] = granules_in_common_total
     df['Gradient_exclusive_count'] = gradient_exclusive_total
     df['ML_exlusive_count'] = ml_exlusive_total
-    df.to_csv(f"D:\Master\MasterProject\GE_result_analysis\comparison_results/{pathlib.Path(GRADIENT_PATH).stem}.cvs")
+
+    df['total_frames_gradient'] = nr_frames_gradient
+    df['total_frames_ml'] = nr_frames_ml
+    df['nr_frames_valid_gradient'] = nr_frames_valid_gradient
+    df['nr_frames_valid_ml'] = nr_frames_valid_ml
+    df.to_csv(f"/Home/siv32/eto033/MasterProject/GE_result_analysis/comparison_results/{pathlib.Path(GRADIENT_PATH).stem}.cvs")
 
     del fourier_pd_gradient
     del fourier_pd_ml

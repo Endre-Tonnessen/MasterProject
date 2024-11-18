@@ -219,6 +219,56 @@ def bioformatsGen(im_path):
                 actual_timestamp=actual_timestamp,
             )
 
+def bioformatsGen_spesific_frames(im_path, frames: list[int]):
+    """ Load an image from a bioformats file. """
+    # Get some metadata from the OMEXML data
+    md = bf.get_omexml_metadata(str(im_path))
+    o = bf.OMEXML(md)
+
+    # Extract the relevant terms
+    pixelData = o.image().Pixels
+    pixel_size = pixelData.PhysicalSizeX # TODO: Print this out? Might be the size of a pixel in (micron meter? some other unit?)  
+    n_slices = pixelData.SizeZ
+    n_frames = pixelData.SizeT
+    print("PIXEL: ",pixel_size)
+
+    # Get the image microscope format
+    im_extension = ''.join(im_path.suffixes)
+
+    if n_slices > 1:
+        raise ValueError("Currently we don't support 3D images.")
+
+    # TODO: Get this working for non-andor images
+    if im_extension == ".ims":
+        time_stamps = _getIMStimeStamps(n_frames, md)
+        actual_timestamp = True
+    elif im_extension == ".lif":
+        time_stamps = _getLIFtimeStamps(n_frames, o)
+        actual_timestamp = True
+    else:
+        time_stamps = np.zeros(n_frames)
+        actual_timestamp = False
+
+    if im_extension ==".tif":
+        pixel_size = 0.1408 # HACK! but right for evan work TODO JACK TO FIX TIFF
+
+    if not JAVAVM_STARTED:
+        startVM()
+
+    with bf.ImageReader(str(im_path)) as reader:
+        # For frame in frame_nums
+        for frame_num in frames:
+            frame_data = reader.read(t=frame_num, z=0, c=0, rescale=False)
+            yield MicroscopeFrame(
+                im_data=frame_data,
+                im_path=im_path,
+                frame_num=frame_num,
+                total_frames=n_frames,
+                timestamp=time_stamps[frame_num],
+                pixel_size=pixel_size,
+                actual_pixel_size=True,
+                actual_timestamp=actual_timestamp,
+            )
 
 def _getIMStimeStamps(n_frames, md) -> np.ndarray:
     """ Return an array with the timestamps for each frame. """

@@ -142,8 +142,16 @@ snakemake -d "experiment_directory"
 
 nohop snakemake --use-conda -j 48 -d "experiment_dir" &
 
-# -k -> Complete, continous if error arises
+
+# Navigate to /Home/siv32/eto033/granule_explorer_core/experiments
+# Use commands below to start process
+
+# -k -> Complete, continous if error arises | 44 / 4 = 11 processes
 snakemake -k --use-conda -j 44 -d "ML_2019-10-31"
+# To find which user spawned a process. Use to identify my eto033 programs for termination.
+ps -u -p 1234 
+
+# Model: best_model__DeepLabV3Plus__timm-efficientnet-b2__BCEJaccardLoss__Freeze_encoder_False__two_channel__LR_1e-5.pth
 
 # Add source ims directory to config file
 
@@ -151,4 +159,3 @@ snakemake -k --use-conda -j 44 -d "ML_2019-10-31"
 NB:
 Missions, snakefile
 
-Tannlege: 8. Juli kl 14

@@ -257,3 +257,136 @@ def bres(x1,y1,x2,y2): # https:#en.wikipedia.org/wiki/Bresenham%27s_line_algorit
         xcoordinates.append(x)
         ycoordinates.append(y)
     return xcoordinates, ycoordinates
+
+
+
+# ------------------ Gradients of image -------------------------
+@dataclass
+class Kernels:
+    """ Implemenation of two seperable kernels that represent a gradient estimations. """
+
+    xx: np.ndarray
+    xy: np.ndarray
+    yx: np.ndarray
+    yy: np.ndarray
+    label: str
+
+    def gradient_x(self, image):
+        """ Apply the x kernels to get the gradient in the x direction. """
+        return apply_seperable_kernel(image, self.xx, self.xy)
+
+    def gradient_y(self, image):
+        """ Apply the y kernels to get the gradient in the x direction. """
+        return apply_seperable_kernel(image, self.yx, self.yy)
+    
+def apply_seperable_kernel(image, v_1, v_2):
+    """ Apply a separable kernel G to an image where K = v_2 * v_1.
+
+    Namely, v_1 is applied to the image first. """
+    output = np.zeros_like(image)
+    filter_kwargs = dict(mode="reflect", cval=0, origin=0)
+
+    filters.correlate1d(image, v_1, 1, output, **filter_kwargs)
+    filters.correlate1d(output, v_2, 0, output, **filter_kwargs)
+    return output
+
+fourth_order = Kernels(
+    np.array([1, -8, 0, 8, -1]) / 12.0,
+    [1],
+    [1],
+    np.array([1, -8, 0, 8, -1]) / 12.0,
+    "Central fourth order",
+)
+
+# ------------------------------------------------------------
+
+
+class _BoundaryExtractionGradient():
+    """ Extract the boundary of granule using a directional gradient.
+        this is for granule which appear as a solid blob in the microscope.
+
+    Input parameters
+    ----------
+
+    granule: Granule
+        Extract the boundary from this granule.
+
+
+    Methods
+    -------
+
+    process_image
+        calculate directional gradients for each pixel
+
+    """
+    def process_image(self, image, local_centre):
+        """ Create a directional gradient of the image.
+
+        This calculates the component of the gradient along the radial vector of
+        the granule.
+
+        This is much more resistant to other granules in the local area.
+        Further, the maximum of the gradient is much more reliable than some
+        arbitrary threshold value; while the sobel is useful for this, the use of
+        an absolute value of the gradient caused problems.
+        """
+
+        x_grad, y_grad = self.calculate_gradient(image)
+        x_rad, y_rad = self.get_angle_from_centre(image, local_centre)
+
+        self.processed_image = x_grad * x_rad + y_grad * y_rad
+        return self.processed_image
+
+    def get_angle_from_centre(self, image, local_centre):
+        """Return a normalised vector field of the angle from the local centre of the
+        granule.
+        """
+        crop_width, crop_height = image.shape
+        # Get a vector with the distance from the centre in the x and y directions
+        yDist = np.arange(crop_width) -  local_centre[1]
+        xDist = np.arange(crop_height) - local_centre[0]
+
+        # Turn this into a field
+        xx, yy = np.meshgrid(xDist, yDist)
+
+        # Normalise to unit vectors
+        mag = -np.sqrt(xx ** 2 + yy ** 2)
+
+        return xx / mag, yy / mag
+
+    def calculate_gradient(self, image: np.ndarray):
+        """ Calculate the gradient field of the image.
+
+        Parameters
+        ----------
+        image:np.ndarray
+            The image to use, if none is provided then use the raw image of the
+            granule.
+
+        Returns
+        -------
+        np.ndarray:
+            A XxYx2 array with the gradient field of the granule, the top most slice
+            is in the x direction and the second the y direction.
+
+        """
+        im_smoothed = ski.filters.gaussian(image, 1.5)
+
+        kern = fourth_order
+
+        x_grad = kern.gradient_x(im_smoothed)
+        y_grad = kern.gradient_y(im_smoothed)
+        return x_grad, y_grad
+
+
+
+
+
+
+
+
+
+
+
+
+
